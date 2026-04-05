@@ -1,7 +1,7 @@
 variable "aws_region" {
   description = "AWS region to deploy resources"
   type        = string
-  default     = "eu-west-2"
+  default     = "ap-south-1"
 }
 
 variable "environment" {
@@ -22,7 +22,7 @@ variable "project_name" {
 variable "tf_state_bucket" {
   description = "S3 bucket that holds Terraform state (must already exist)"
   type        = string
-  default     = "asset-tracker-tf-state"
+  default     = "asset-tracker-tf-state-755231954480"
 }
 
 variable "tf_state_lock_table" {

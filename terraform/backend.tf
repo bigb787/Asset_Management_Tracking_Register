@@ -36,16 +36,16 @@ terraform {
   }
 
   backend "s3" {
-    bucket         = "asset-tracker-tf-state"
+    bucket         = "asset-tracker-tf-state-755231954480"
     key            = "asset-tracker/prod/terraform.tfstate"
-    region         = "eu-west-2"
+    region         = "ap-south-1"
     dynamodb_table = "asset-tracker-tf-locks"
     encrypt        = true
   }
 }
 
 provider "aws" {
-  region  = var.aws_region
+  region  = var.aws_region  # ap-south-1
   profile = "my-asset-project"
 
   default_tags {

@@ -17,7 +17,7 @@ import { Asset, CreateAssetInput, UpdateAssetInput } from './types';
 const TABLE_NAME = process.env.DYNAMODB_TABLE!;
 
 const clientConfig: DynamoDBClientConfig = {
-  region: process.env.AWS_REGION ?? 'eu-west-2',
+  region: process.env.AWS_REGION ?? 'ap-south-1',
 };
 
 const ddbClient = new DynamoDBClient(clientConfig);

@@ -8,7 +8,7 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Asset, ExportResult } from './types';
 
 const BUCKET = process.env.S3_EXPORTS_BUCKET!;
-const REGION = process.env.AWS_REGION ?? 'eu-west-2';
+const REGION = process.env.AWS_REGION ?? 'ap-south-1';
 
 const s3 = new S3Client({ region: REGION });
 
