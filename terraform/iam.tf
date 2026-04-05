@@ -164,7 +164,10 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "dynamodb:CreateTable", "dynamodb:DeleteTable", "dynamodb:DescribeTable",
           "dynamodb:UpdateTable", "dynamodb:TagResource", "dynamodb:UntagResource",
           "dynamodb:ListTagsOfResource", "dynamodb:DescribeContinuousBackups",
-          "dynamodb:UpdateContinuousBackups", "dynamodb:DescribeTimeToLive"
+          "dynamodb:UpdateContinuousBackups", "dynamodb:DescribeTimeToLive",
+          "dynamodb:UpdateTimeToLive", "dynamodb:DescribeTableReplicaAutoScaling",
+          "dynamodb:DescribeKinesisStreamingDestination",
+          "dynamodb:DescribeExport", "dynamodb:DescribeImport"
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${local.name_prefix}-*"
       },
@@ -210,17 +213,30 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "arn:aws:s3:::${local.name_prefix}-*/*"
         ]
       },
-      # --- Lambda ---
+      # --- Lambda (all actions Terraform needs to manage + read state) ---
       {
         Sid    = "LambdaManage"
         Effect = "Allow"
         Action = [
-          "lambda:CreateFunction", "lambda:DeleteFunction", "lambda:UpdateFunctionCode",
-          "lambda:UpdateFunctionConfiguration", "lambda:GetFunction",
-          "lambda:GetFunctionConfiguration", "lambda:AddPermission",
-          "lambda:RemovePermission", "lambda:ListVersionsByFunction",
-          "lambda:PublishVersion", "lambda:TagResource", "lambda:UntagResource",
-          "lambda:ListTags", "lambda:GetPolicy"
+          "lambda:CreateFunction", "lambda:DeleteFunction",
+          "lambda:UpdateFunctionCode", "lambda:UpdateFunctionConfiguration",
+          "lambda:GetFunction", "lambda:GetFunctionConfiguration",
+          "lambda:AddPermission", "lambda:RemovePermission",
+          "lambda:ListVersionsByFunction", "lambda:PublishVersion",
+          "lambda:TagResource", "lambda:UntagResource", "lambda:ListTags",
+          "lambda:GetPolicy",
+          "lambda:GetFunctionCodeSigningConfig",
+          "lambda:GetFunctionConcurrency",
+          "lambda:GetFunctionEventInvokeConfig",
+          "lambda:GetFunctionUrlConfig",
+          "lambda:ListAliases",
+          "lambda:ListEventSourceMappings",
+          "lambda:ListFunctionEventInvokeConfigs",
+          "lambda:PutFunctionConcurrency",
+          "lambda:DeleteFunctionConcurrency",
+          "lambda:PutFunctionEventInvokeConfig",
+          "lambda:UpdateFunctionEventInvokeConfig",
+          "lambda:DeleteFunctionEventInvokeConfig"
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.name_prefix}-*"
       },
