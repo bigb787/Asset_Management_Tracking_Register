@@ -202,6 +202,8 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "s3:GetBucketRequestPayment",
           "s3:GetBucketWebsite",
           "s3:GetBucketCORS",
+          "s3:PutBucketCORS",
+          "s3:DeleteBucketCORS",
           "s3:GetBucketLogging",
           "s3:GetAccelerateConfiguration",
           "s3:GetBucketNotification",
