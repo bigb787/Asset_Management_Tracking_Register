@@ -213,7 +213,7 @@ export const SECTIONS: { title: string; assetTypes: string[]; fields: FieldDef[]
     ],
   },
   {
-    title: 'Admin Cameras & DVR', assetTypes: ['Camera', 'DVR'],
+    title: 'Admin', assetTypes: ['Camera', 'DVR'],
     fields: [
       { key: 'assetType',     label: 'Asset Type' },
       { key: 'location',      label: 'Location' },

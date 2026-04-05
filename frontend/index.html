@@ -163,7 +163,7 @@ textarea.fc{resize:vertical;min-height:60px;}
   <div class="nav-item" id="nav-ups"         onclick="goTo('ups')"><span class="ni">🔋</span>UPS</div>
   <div class="nav-item" id="nav-mobiles"     onclick="goTo('mobiles')"><span class="ni">📱</span>Mobile Phones</div>
   <div class="nav-item" id="nav-scanners"    onclick="goTo('scanners')"><span class="ni">🖨️</span>Scanners &amp; Printers</div>
-  <div class="nav-item" id="nav-cameras"     onclick="goTo('cameras')"><span class="ni">📷</span>Admin Cameras &amp; DVR</div>
+  <div class="nav-item" id="nav-cameras"     onclick="goTo('cameras')"><span class="ni">📷</span>Admin</div>
 
   <div class="nav-group">Operations</div>
   <div class="nav-item" id="nav-gatepass"    onclick="goTo('gatepass')"><span class="ni">🎫</span>Gate Pass</div>
@@ -459,7 +459,7 @@ const SECS = {
     ]
   },
   cameras:{
-    title:'Admin Cameras & DVR', icon:'📷', sub:'Admin Devices',
+    title:'Admin', icon:'📷', sub:'Admin Devices',
     types:['Camera','DVR'],
     fields:[
       {k:'assetType',     l:'Asset Type',          t:'sel', o:['Camera','DVR']},
