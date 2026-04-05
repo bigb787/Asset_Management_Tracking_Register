@@ -250,13 +250,23 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
       },
       # --- CloudWatch Logs (for Lambda + API GW log groups) ---
       {
-        Sid    = "CloudWatchLogs"
+        Sid    = "CloudWatchLogsManage"
         Effect = "Allow"
         Action = [
-          "logs:CreateLogGroup", "logs:DeleteLogGroup", "logs:DescribeLogGroups",
-          "logs:PutRetentionPolicy", "logs:ListTagsLogGroup", "logs:TagLogGroup"
+          "logs:CreateLogGroup", "logs:DeleteLogGroup",
+          "logs:PutRetentionPolicy", "logs:ListTagsLogGroup", "logs:TagLogGroup",
+          "logs:ListTagsForResource", "logs:UntagLogGroup"
         ]
         Resource = "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/*"
+      },
+      {
+        Sid    = "CloudWatchLogsDescribe"
+        Effect = "Allow"
+        Action = [
+          "logs:DescribeLogGroups",
+          "logs:DescribeLogStreams"
+        ]
+        Resource = "*"
       },
       # --- Caller identity (terraform plan/apply needs this) ---
       {
