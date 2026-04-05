@@ -299,7 +299,7 @@ export async function generateAndUploadExcel(assets: Asset[]): Promise<ExportRes
   buildByLocationSheet(wb, assets);
   buildSummarySheet(wb, assets);
 
-  const buffer = await wb.xlsx.writeBuffer() as Buffer;
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const fileName = `asset-export-${timestamp}.xlsx`;
