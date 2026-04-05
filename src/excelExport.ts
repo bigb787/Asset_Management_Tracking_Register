@@ -320,11 +320,186 @@ function sortDynamicKeys(keys: string[]): string[] {
   });
 }
 
+/** Standard keys stored by the API (always show in export when using templates). */
+const META_KEYS = ['assetId', 'assetType', 'assetName', 'createdAt', 'updatedAt', 'createdBy'];
+
+const TEMPLATE_LAPTOP = [
+  ...META_KEYS,
+  'manufacturer',
+  'serviceTag',
+  'model',
+  'partNumber',
+  'assetOwner',
+  'assignedTo',
+  'status',
+  'lastOwner',
+  'department',
+  'location',
+  'assetHealth',
+  'warranty',
+  'installDate',
+  'dateAdded',
+  'processor',
+  'ram',
+  'hardDisk',
+  'os',
+  'supportVendor',
+  'keyboard',
+  'mouse',
+  'headphone',
+  'usbExtender',
+  'containsPII',
+  'notes',
+  'serialNumber',
+  'purchaseDate',
+  'warrantyExpiry',
+];
+
+const TEMPLATE_DESKTOP = [
+  ...TEMPLATE_LAPTOP.filter(
+    (k) => !['keyboard', 'mouse', 'headphone', 'usbExtender'].includes(k),
+  ),
+  'configuration',
+];
+
+const TEMPLATE_MONITOR = [
+  ...META_KEYS,
+  'manufacturer',
+  'serviceTag',
+  'model',
+  'partNumber',
+  'assetOwner',
+  'assignedTo',
+  'status',
+  'department',
+  'location',
+  'assetHealth',
+  'warranty',
+  'installDate',
+  'dateAdded',
+  'supportVendor',
+  'containsPII',
+];
+
+const TEMPLATE_ACCESSORY = [
+  ...META_KEYS,
+  'manufacturer',
+  'model',
+  'partNumber',
+  'assetOwner',
+  'assignedTo',
+  'status',
+  'department',
+  'location',
+  'warranty',
+  'installDate',
+  'dateAdded',
+  'supportVendor',
+  'linkedDevice',
+  'containsPII',
+];
+
+const TEMPLATE_NETWORKING = [
+  ...META_KEYS,
+  'deviceId',
+  'macId',
+  'assetOwner',
+  'location',
+  'model',
+  'serialNumber',
+  'partNumber',
+  'warranty',
+  'installDate',
+  'os',
+  'supportVendor',
+  'department',
+  'configuration',
+  'containsPII',
+  'dateAdded',
+];
+
+const TEMPLATE_CLOUD = [
+  ...META_KEYS,
+  'assetValue',
+  'assetOwner',
+  'location',
+  'containsPII',
+  'region',
+  'dateAdded',
+];
+
+const TEMPLATE_INFODESK = [...META_KEYS, 'assetValue', 'assetOwner', 'location', 'containsPII', 'dateAdded'];
+
+const TEMPLATE_THIRDPARTY = [
+  ...TEMPLATE_INFODESK,
+  'cveAlert',
+  'setup',
+  'billingApi',
+];
+
+const TEMPLATE_UPS = [
+  ...META_KEYS,
+  'deviceId',
+  'location',
+  'model',
+  'warranty',
+  'installDate',
+  'supportVendor',
+  'department',
+  'assetOwner',
+  'containsPII',
+  'dateAdded',
+];
+
+const TEMPLATE_MOBILE = [
+  ...META_KEYS,
+  'deviceId',
+  'location',
+  'model',
+  'partNumber',
+  'warranty',
+  'supportVendor',
+  'department',
+  'assetOwner',
+  'containsPII',
+  'dateAdded',
+];
+
+const TEMPLATE_SCANNER = [
+  ...META_KEYS,
+  'deviceId',
+  'location',
+  'model',
+  'serviceTag',
+  'partNumber',
+  'warranty',
+  'supportVendor',
+  'department',
+  'description',
+  'assetOwner',
+  'containsPII',
+  'dateAdded',
+];
+
+const TEMPLATE_ADMIN_CAM = [
+  ...META_KEYS,
+  'location',
+  'invoiceNo',
+  'warranty',
+  'installDate',
+  'supportVendor',
+  'department',
+  'assetOwner',
+  'containsPII',
+  'dateAdded',
+];
+
 /** Adds one worksheet; returns the final sheet name (may differ if duplicate). */
 function addDynamicAssetSheet(
   wb: ExcelJS.Workbook,
   desiredSheetName: string,
   assets: Record<string, unknown>[],
+  templateKeys?: string[],
 ): string {
   const base =
     desiredSheetName
@@ -344,6 +519,9 @@ function addDynamicAssetSheet(
   const ws = wb.addWorksheet(name);
 
   const keySet = new Set<string>();
+  if (templateKeys?.length) {
+    for (const k of templateKeys) keySet.add(k);
+  }
   assets.forEach((a) => Object.keys(a).forEach((k) => keySet.add(k)));
   const keys = sortDynamicKeys(Array.from(keySet));
   if (keys.length === 0) {
@@ -367,26 +545,47 @@ function addDynamicAssetSheet(
   return name;
 }
 
-/** Matches app sections (GatePass & Leaver excluded before calling). */
-const ASSET_REGISTER_MULTI_TABS: { sheetName: string; types: string[] }[] = [
-  { sheetName: 'Laptops', types: ['Laptop'] },
-  { sheetName: 'Desktops', types: ['Desktop'] },
-  { sheetName: 'Monitors', types: ['Monitor'] },
+/**
+ * One tab per register. Shorter sheet names reduce how cramped tabs look in Excel
+ * when many are visible (Excel shrinks tab labels to fit the bar).
+ */
+const ASSET_REGISTER_MULTI_TABS: {
+  sheetName: string;
+  types: string[];
+  templateKeys: string[];
+}[] = [
+  { sheetName: 'Laptops', types: ['Laptop'], templateKeys: TEMPLATE_LAPTOP },
+  { sheetName: 'Desktops', types: ['Desktop'], templateKeys: TEMPLATE_DESKTOP },
+  { sheetName: 'Monitors', types: ['Monitor'], templateKeys: TEMPLATE_MONITOR },
   {
     sheetName: 'Accessories',
     types: ['Keyboard', 'Mouse', 'Headphone', 'USB Extender', 'Accessory'],
+    templateKeys: TEMPLATE_ACCESSORY,
   },
   {
-    sheetName: 'Networking',
+    sheetName: 'Network',
     types: ['Switch', 'Router', 'Firewall', 'Access Point', 'Networking'],
+    templateKeys: TEMPLATE_NETWORKING,
   },
-  { sheetName: 'Cloud', types: ['Cloud'] },
-  { sheetName: 'Infodesk Apps', types: ['Infodesk Application'] },
-  { sheetName: 'Third Party SW', types: ['Third Party Software'] },
-  { sheetName: 'UPS', types: ['UPS'] },
-  { sheetName: 'Mobile Phones', types: ['Mobile Phone'] },
-  { sheetName: 'Scanners Printers', types: ['Scanner', 'Printer'] },
-  { sheetName: 'Admin', types: ['Camera', 'DVR'] },
+  { sheetName: 'Cloud', types: ['Cloud'], templateKeys: TEMPLATE_CLOUD },
+  {
+    sheetName: 'Infodesk',
+    types: ['Infodesk Application'],
+    templateKeys: TEMPLATE_INFODESK,
+  },
+  {
+    sheetName: '3rdParty SW',
+    types: ['Third Party Software'],
+    templateKeys: TEMPLATE_THIRDPARTY,
+  },
+  { sheetName: 'UPS', types: ['UPS'], templateKeys: TEMPLATE_UPS },
+  { sheetName: 'Mobile', types: ['Mobile Phone'], templateKeys: TEMPLATE_MOBILE },
+  {
+    sheetName: 'ScanPrint',
+    types: ['Scanner', 'Printer'],
+    templateKeys: TEMPLATE_SCANNER,
+  },
+  { sheetName: 'Admin', types: ['Camera', 'DVR'], templateKeys: TEMPLATE_ADMIN_CAM },
 ];
 
 // ---------------------------------------------------------------------------
@@ -403,7 +602,7 @@ export async function generateMultiTabAssetRegister(
     const subset = assets.filter((a) =>
       tab.types.includes(String(a.assetType)),
     ) as unknown as Record<string, unknown>[];
-    addDynamicAssetSheet(wb, tab.sheetName, subset);
+    addDynamicAssetSheet(wb, tab.sheetName, subset, tab.templateKeys);
   }
 
   const covered = new Set(ASSET_REGISTER_MULTI_TABS.flatMap((t) => t.types));
@@ -411,7 +610,9 @@ export async function generateMultiTabAssetRegister(
     (a) => !covered.has(String(a.assetType)),
   ) as unknown as Record<string, unknown>[];
   if (other.length > 0) {
-    addDynamicAssetSheet(wb, 'Other', other);
+    const union = new Set<string>();
+    other.forEach((row) => Object.keys(row).forEach((k) => union.add(k)));
+    addDynamicAssetSheet(wb, 'Other', other, sortDynamicKeys([...union]));
   }
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
