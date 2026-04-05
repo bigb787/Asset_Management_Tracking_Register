@@ -821,7 +821,7 @@ async function runLeaverEvidenceUpload(inputId){
       body:file,
     });
     if(!put.ok) throw new Error('Upload failed ('+put.status+')');
-    const fullUrl=API+data.evidenceUrlPath;
+    const fullUrl=data.evidenceUrl||(API+data.evidenceUrlPath);
     hidden.value=fullUrl;
     let a=wrap.querySelector('a.evidence-view');
     if(!a){

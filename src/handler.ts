@@ -14,8 +14,8 @@ import { generateMultiTabAssetRegister, generateSectionExcel } from './excelExpo
 import {
   assertLeaverEvidenceKey,
   createLeaverEvidencePresignedPut,
-  getLeaverEvidencePresignedGet,
   isAllowedEvidenceContentType,
+  publicLeaverEvidenceUrl,
 } from './leaversEvidence';
 import { CreateAssetInput, UpdateAssetInput, ApiResponse } from './types';
 
@@ -242,11 +242,13 @@ export async function handler(
         fileName,
         contentType,
       );
+      const evidenceUrl = publicLeaverEvidenceUrl(key);
+      // Legacy: API redirect URL (still works; redirects to same permanent S3 URL)
       const evidenceUrlPath = `/files/leavers-evidence?key=${encodeURIComponent(key)}`;
-      return ok({ uploadUrl, key, evidenceUrlPath });
+      return ok({ uploadUrl, key, evidenceUrl, evidenceUrlPath });
     }
 
-    // ---- GET /files/leavers-evidence → 302 to presigned S3 GET ------------
+    // ---- GET /files/leavers-evidence → 301 to permanent public S3 URL -----
     if (method === 'GET' && path === '/files/leavers-evidence') {
       const key = event.queryStringParameters?.['key']?.trim();
       if (!key) return badRequest('key query parameter is required');
@@ -255,9 +257,9 @@ export async function handler(
       } catch {
         return badRequest('Invalid key');
       }
-      const redirectUrl = await getLeaverEvidencePresignedGet(key);
+      const redirectUrl = publicLeaverEvidenceUrl(key);
       return {
-        statusCode: 302,
+        statusCode: 301,
         headers: {
           Location: redirectUrl,
           'Access-Control-Allow-Origin': '*',

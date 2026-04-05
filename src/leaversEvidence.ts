@@ -1,9 +1,5 @@
 import { randomUUID } from 'crypto';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-} from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const BUCKET = process.env.S3_EXPORTS_BUCKET!;
@@ -47,9 +43,11 @@ export async function createLeaverEvidencePresignedPut(
   return { key, uploadUrl };
 }
 
-export async function getLeaverEvidencePresignedGet(key: string): Promise<string> {
-  const cmd = new GetObjectCommand({ Bucket: BUCKET, Key: key });
-  return getSignedUrl(s3, cmd, { expiresIn: 3600 });
+/** Stable HTTPS URL (bucket policy: public read for leavers-evidence/* only). */
+export function publicLeaverEvidenceUrl(key: string): string {
+  assertLeaverEvidenceKey(key);
+  const path = key.split('/').map((seg) => encodeURIComponent(seg)).join('/');
+  return `https://${BUCKET}.s3.${REGION}.amazonaws.com/${path}`;
 }
 
 export function assertLeaverEvidenceKey(key: string): void {
