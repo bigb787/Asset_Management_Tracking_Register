@@ -150,7 +150,18 @@ jobs:
         working-directory: ${{ env.TF_DIR }}
         run: terraform init -input=false
 
-      - name: Terraform Apply
+      # Apply GitHub Actions role policy first so this run gains s3:PutBucketCORS
+      # before S3 CORS / other bucket updates (avoids chicken-and-egg 403).
+      - name: Terraform Apply (GitHub Actions IAM first)
+        if: steps.changes.outputs.terraform == 'true'
+        working-directory: ${{ env.TF_DIR }}
+        run: |
+          terraform apply -input=false -auto-approve \
+            -target=aws_iam_role_policy.github_actions_deploy \
+            -var="environment=prod" \
+            -var="aws_region=${{ env.AWS_REGION }}"
+
+      - name: Terraform Apply (full)
         if: steps.changes.outputs.terraform == 'true'
         working-directory: ${{ env.TF_DIR }}
         run: |

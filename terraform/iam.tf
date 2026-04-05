@@ -215,6 +215,17 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "arn:aws:s3:::${local.name_prefix}-*/*"
         ]
       },
+      # Bucket-level CORS APIs require the exact bucket ARN (wildcard bucket name can deny PutBucketCORS in some cases)
+      {
+        Sid    = "S3ExportsBucketCorsOnly"
+        Effect = "Allow"
+        Action = [
+          "s3:GetBucketCORS",
+          "s3:PutBucketCORS",
+          "s3:DeleteBucketCORS",
+        ]
+        Resource = "arn:aws:s3:::${local.name_prefix}-exports-${data.aws_caller_identity.current.account_id}"
+      },
       # --- Lambda (all actions Terraform needs to manage + read state) ---
       {
         Sid    = "LambdaManage"
