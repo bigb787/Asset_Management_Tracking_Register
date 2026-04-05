@@ -193,7 +193,17 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
           "s3:GetBucketPublicAccessBlock", "s3:PutBucketPublicAccessBlock",
           "s3:GetLifecycleConfiguration", "s3:PutLifecycleConfiguration",
           "s3:GetBucketAcl", "s3:PutBucketAcl", "s3:ListBucket",
-          "s3:PutObject", "s3:GetObject", "s3:DeleteObject"
+          "s3:PutObject", "s3:GetObject", "s3:DeleteObject",
+          "s3:GetBucketPolicy", "s3:PutBucketPolicy", "s3:DeleteBucketPolicy",
+          "s3:GetBucketObjectLockConfiguration",
+          "s3:GetBucketRequestPayment",
+          "s3:GetBucketWebsite",
+          "s3:GetBucketCORS",
+          "s3:GetBucketLogging",
+          "s3:GetAccelerateConfiguration",
+          "s3:GetBucketNotification",
+          "s3:GetReplicationConfiguration",
+          "s3:ListBucketMultipartUploads"
         ]
         Resource = [
           "arn:aws:s3:::${local.name_prefix}-*",
