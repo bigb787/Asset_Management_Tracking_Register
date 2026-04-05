@@ -240,6 +240,14 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
         ]
         Resource = "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${local.name_prefix}-*"
       },
+      # Terraform AWS provider refresh calls GetFunctionCodeSigningConfig; some accounts
+      # only succeed when this action is allowed on * (in addition to function ARN).
+      {
+        Sid      = "LambdaCodeSigningConfigRead"
+        Effect   = "Allow"
+        Action   = ["lambda:GetFunctionCodeSigningConfig"]
+        Resource = "*"
+      },
       # --- API Gateway v2 ---
       {
         Sid    = "APIGatewayManage"

@@ -29,31 +29,51 @@ const ddb = DynamoDBDocumentClient.from(ddbClient, {
 // Create
 // ---------------------------------------------------------------------------
 export async function createAsset(
-  input: CreateAssetInput,
+  input: Record<string, unknown> & { assetType: string },
   createdBy = 'api',
 ): Promise<Asset> {
   const now = new Date().toISOString();
-  const item: Asset = {
-    assetId: randomUUID(),
+  const raw = { ...input } as Record<string, unknown>;
+  const existingId =
+    typeof raw.assetId === 'string' && String(raw.assetId).trim()
+      ? String(raw.assetId).trim()
+      : '';
+  delete raw.assetId;
+  delete raw.createdAt;
+  delete raw.updatedAt;
+  delete raw.createdBy;
+
+  const assetId = existingId || randomUUID();
+
+  const item: Record<string, unknown> = {
+    ...raw,
+    assetId,
     assetType: input.assetType,
-    assetName: input.assetName,
-    serialNumber: input.serialNumber,
-    manufacturer: input.manufacturer,
-    model: input.model,
-    location: input.location,
-    assignedTo: input.assignedTo,
-    department: input.department,
-    status: input.status ?? 'Active',
-    purchaseDate: input.purchaseDate,
-    warrantyExpiry: input.warrantyExpiry,
-    notes: input.notes,
     createdAt: now,
     updatedAt: now,
     createdBy,
   };
 
+  const nonempty = (...c: unknown[]) =>
+    c.find((x) => x !== undefined && x !== null && String(x).trim() !== '');
+  if (!item.assetName || String(item.assetName).trim() === '') {
+    const fallback = nonempty(
+      item.gatePassNo,
+      item.employeeName,
+      item.deviceId,
+      item.serviceTag,
+    );
+    item.assetName = fallback ? String(fallback) : 'Untitled';
+  }
+  if (!item.location || item.location === '') {
+    item.location = 'India';
+  }
+  if (!item.status || item.status === '') {
+    item.status = 'Active';
+  }
+
   await ddb.send(new PutCommand({ TableName: TABLE_NAME, Item: item }));
-  return item;
+  return item as unknown as Asset;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,7 +157,8 @@ export async function updateAsset(
   if (!existing) return null;
 
   const now = new Date().toISOString();
-  const updateFields: Record<string, unknown> = { ...updates, updatedAt: now };
+  const { assetId: _aid, ...rest } = updates as Record<string, unknown>;
+  const updateFields: Record<string, unknown> = { ...rest, updatedAt: now };
 
   const setExpressions: string[] = [];
   const names: Record<string, string> = {};

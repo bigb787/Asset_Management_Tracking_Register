@@ -10,7 +10,7 @@ import {
   updateAsset,
   deleteAsset,
 } from './dynamodb';
-import { generateAndUploadExcel } from './excelExport';
+import { generateAndUploadExcel, generateSectionExcel } from './excelExport';
 import { CreateAssetInput, UpdateAssetInput, ApiResponse } from './types';
 
 // ---------------------------------------------------------------------------
@@ -91,10 +91,84 @@ export async function handler(
 
   try {
     // ---- GET /assets/export -----------------------------------------------
+    // Optional: ?assetType=GatePass or ?assetTypes=Laptop,Desktop
     if (method === 'GET' && path === '/assets/export') {
       const assets = await listAssets();
-      const result = await generateAndUploadExcel(assets);
+      const q = event.queryStringParameters ?? {};
+      const single = q['assetType']?.trim();
+      const multi = q['assetTypes']?.trim();
+      let subset = assets;
+      let label = 'all';
+      if (multi) {
+        const types = multi
+          .split(',')
+          .map((t) => t.trim())
+          .filter(Boolean);
+        subset = assets.filter((a) => types.includes(a.assetType));
+        label = types.join('-') || 'section';
+      } else if (single) {
+        subset = assets.filter((a) => a.assetType === single);
+        label = single;
+      }
+      const result =
+        single || multi
+          ? await generateSectionExcel(
+              subset as unknown as Record<string, unknown>[],
+              label,
+            )
+          : await generateAndUploadExcel(assets);
       return ok(result);
+    }
+
+    // ---- POST /assets/bulk (import — create and/or update by assetId) -----
+    if (method === 'POST' && path === '/assets/bulk') {
+      const body = parseBody(event);
+      if (!body || !Array.isArray((body as { items?: unknown }).items)) {
+        return badRequest('Body must be JSON with an "items" array');
+      }
+      const items = (body as { items: Record<string, unknown>[] }).items;
+      if (items.length === 0) return badRequest('items must not be empty');
+      if (items.length > 500) return badRequest('Maximum 500 items per request');
+
+      let created = 0;
+      let updated = 0;
+      const errors: string[] = [];
+
+      for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        if (!item || typeof item !== 'object' || !item.assetType) {
+          errors.push(`Row ${i + 1}: assetType is required`);
+          continue;
+        }
+        const id =
+          typeof item.assetId === 'string' && item.assetId.trim()
+            ? item.assetId.trim()
+            : '';
+        try {
+          const validLocations = ['India', 'US', 'UK', 'Sweden'];
+          if (item.location && !validLocations.includes(String(item.location))) {
+            errors.push(`Row ${i + 1}: invalid location`);
+            continue;
+          }
+          if (id) {
+            const { assetId: _omit, ...upd } = item;
+            const out = await updateAsset(id, upd as UpdateAssetInput);
+            if (out) updated++;
+            else errors.push(`Row ${i + 1}: assetId not found`);
+          } else {
+            await createAsset(
+              item as Record<string, unknown> & { assetType: string },
+            );
+            created++;
+          }
+        } catch (e) {
+          errors.push(
+            `Row ${i + 1}: ${e instanceof Error ? e.message : 'failed'}`,
+          );
+        }
+      }
+
+      return ok({ created, updated, errors });
     }
 
     // ---- GET /assets -------------------------------------------------------
@@ -113,16 +187,18 @@ export async function handler(
       const body = parseBody(event);
       if (!body) return badRequest('Invalid JSON body');
 
-      const input = body as CreateAssetInput;
+      const input = body as CreateAssetInput & Record<string, unknown>;
       if (!input.assetType) return badRequest('assetType is required');
 
       // location validation — only if a location value is provided
       const validLocations = ['India', 'US', 'UK', 'Sweden'];
-      if (input.location && !validLocations.includes(input.location)) {
+      if (input.location && !validLocations.includes(String(input.location))) {
         return badRequest(`location must be one of: ${validLocations.join(', ')}`);
       }
 
-      const asset = await createAsset(input);
+      const asset = await createAsset(
+        input as Record<string, unknown> & { assetType: string },
+      );
       return created(asset);
     }
 

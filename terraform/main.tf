@@ -105,16 +105,16 @@ resource "aws_s3_bucket_lifecycle_configuration" "exports" {
 # ---------------------------------------------------------------------------
 data "aws_caller_identity" "current" {}
 
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_dir  = "${path.module}/../dist"
-  output_path = "${path.module}/../dist/lambda.zip"
+# Lambda zip is pre-built by the CI pipeline (npm run build → zip dist/handler.js)
+# and placed at dist/lambda.zip before terraform runs.
+locals {
+  lambda_zip_path = "${path.module}/../dist/lambda.zip"
 }
 
 resource "aws_lambda_function" "api" {
   function_name    = "${local.name_prefix}-api"
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  filename         = local.lambda_zip_path
+  source_code_hash = filebase64sha256(local.lambda_zip_path)
   handler          = "handler.handler"
   runtime          = var.lambda_runtime
   role             = aws_iam_role.lambda_exec.arn

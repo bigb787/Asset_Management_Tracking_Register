@@ -326,3 +326,80 @@ export async function generateAndUploadExcel(assets: Asset[]): Promise<ExportRes
   const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
   return { url, fileName, expiresAt };
 }
+
+// ---------------------------------------------------------------------------
+// Single-sheet export (one section / filtered asset type(s))
+// ---------------------------------------------------------------------------
+export async function generateSectionExcel(
+  assets: Record<string, unknown>[],
+  sectionLabel: string,
+): Promise<ExportResult> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Asset Manager';
+  wb.created = new Date();
+
+  const safeSheet = sectionLabel.replace(/[[\]\\*?:/]/g, '-').slice(0, 31) || 'Export';
+  const ws = wb.addWorksheet(safeSheet);
+
+  const keySet = new Set<string>();
+  assets.forEach((a) => Object.keys(a).forEach((k) => keySet.add(k)));
+  const keys = Array.from(keySet).sort((a, b) => {
+    const pri = [
+      'assetId',
+      'assetType',
+      'assetName',
+      'gatePassNo',
+      'employeeName',
+    ];
+    const ia = pri.indexOf(a);
+    const ib = pri.indexOf(b);
+    if (ia >= 0 && ib >= 0) return ia - ib;
+    if (ia >= 0) return -1;
+    if (ib >= 0) return 1;
+    return a.localeCompare(b);
+  });
+  if (keys.length === 0) {
+    keys.push('assetId', 'assetType');
+  }
+
+  ws.columns = keys.map((k) => ({ header: k, key: k, width: 22 }));
+  applyHeaderRow(ws.getRow(1));
+  assets.forEach((a, i) => {
+    const rowObj = keys.reduce(
+      (o, k) => {
+        o[k] = a[k] ?? '';
+        return o;
+      },
+      {} as Record<string, unknown>,
+    );
+    const row = ws.addRow(rowObj);
+    applyDataRow(row, i % 2 === 1);
+  });
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const slug = sectionLabel.replace(/[^a-zA-Z0-9-_]/g, '-').replace(/-+/g, '-');
+  const fileName = `${slug || 'section'}-export-${timestamp}.xlsx`;
+  const s3Key = `exports/${fileName}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ServerSideEncryption: 'AES256',
+      ContentDisposition: `attachment; filename="${fileName}"`,
+    }),
+  );
+
+  const expiresIn = 3600;
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
+    { expiresIn },
+  );
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  return { url, fileName, expiresAt };
+}

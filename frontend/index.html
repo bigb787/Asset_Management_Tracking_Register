@@ -57,6 +57,9 @@ tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
 tbody tr:last-child{border-bottom:none;}
 tbody tr:hover{background:#F8FAFC;}
 tbody td{padding:9px 12px;vertical-align:middle;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+th.sticky-act,td.sticky-act{position:sticky;left:0;z-index:2;background:#fff;box-shadow:4px 0 8px -4px rgba(0,0,0,.12);}
+thead th.sticky-act{z-index:3;background:var(--bg);}
+tbody tr:hover td.sticky-act{background:#F8FAFC;}
 .td-actions{display:flex;gap:4px;white-space:nowrap;}
 /* BADGES */
 .badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
@@ -131,7 +134,7 @@ textarea.fc{resize:vertical;min-height:60px;}
   </div>
   <div style="display:flex;gap:8px;">
     <button class="btn btn-primary" id="topAddBtn" onclick="openAdd()">＋ Add Asset</button>
-    <button class="btn btn-success" onclick="doExport()">↓ Export All</button>
+    <button class="btn btn-success" id="topExportBtn" onclick="doExport(this)">↓ Export All</button>
   </div>
 </header>
 
@@ -179,6 +182,9 @@ textarea.fc{resize:vertical;min-height:60px;}
     </div>
     <div class="toolbar">
       <input class="search-input" id="tbl-search" placeholder="🔍  Search…" oninput="renderTable()">
+      <button type="button" class="btn btn-outline" onclick="doExportSection(this)">↓ Export this section</button>
+      <button type="button" class="btn btn-outline" onclick="document.getElementById('tbl-import-file').click()">↑ Import Excel</button>
+      <input type="file" id="tbl-import-file" accept=".xlsx,.xls" style="display:none" onchange="handleImportFile(event)">
       <span class="rec-count" id="tbl-count"></span>
     </div>
     <div class="card"><div class="tbl-wrap" id="tbl-wrap"><div class="loading"><span class="spin"></span>Loading…</div></div></div>
@@ -211,6 +217,7 @@ textarea.fc{resize:vertical;min-height:60px;}
 
 <div id="toasts"></div>
 
+<script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
 <script>
 // ─── Config ───────────────────────────────────────────────────────────────────
 const API = 'https://a6ieygm0yl.execute-api.ap-south-1.amazonaws.com';
@@ -546,11 +553,14 @@ function goTo(sec){
   curSec=sec;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('nav-'+sec)?.classList.add('active');
+  const topAdd=document.getElementById('topAddBtn');
   if(sec==='dashboard'){
+    topAdd.textContent='＋ Add Asset';
     document.getElementById('sec-dashboard').style.display='';
     document.getElementById('sec-table').style.display='none';
     loadDashboard();
   } else {
+    topAdd.textContent='＋ Add — '+SECS[sec].title;
     document.getElementById('sec-dashboard').style.display='none';
     document.getElementById('sec-table').style.display='';
     const s=SECS[sec];
@@ -624,7 +634,7 @@ function renderRows(rows, sec, compact){
   if(!rows.length) return '<div class="empty"><p>No records found</p></div>';
   const fields = sec ? SECS[sec].fields : null;
   const headers = fields
-    ? fields.map(f=>`<th>${esc(f.l)}</th>`).join('')+'<th>Actions</th>'
+    ? (compact?'':`<th class="sticky-act">Actions</th>`)+fields.map(f=>`<th>${esc(f.l)}</th>`).join('')
     : '<th>Type</th><th>Key Field</th><th>Status</th><th>Location</th>';
 
   const makeRow = r => {
@@ -634,11 +644,11 @@ function renderRows(rows, sec, compact){
       return `<tr><td>${esc(r.assetType)}</td><td>${esc(key)}</td><td>${badge(r.status||r.overallStatus||'')}</td><td>${esc(r.location||'')}</td></tr>`;
     }
     const cells = fields.map(f=>`<td title="${esc(String(r[f.k]||''))}">${badgeOrText(f,r[f.k])}</td>`).join('');
-    const actions = compact?'':`<td><div class="td-actions">
-      <button class="btn btn-outline btn-xs" onclick='openEdit(${JSON.stringify(r)})'>Edit</button>
-      <button class="btn btn-danger btn-xs" onclick="doDelete('${r.assetId}')">Del</button>
+    const actions = compact?'':`<td class="sticky-act"><div class="td-actions">
+      <button type="button" class="btn btn-outline btn-xs" onclick="openEditById('${esc(r.assetId)}')">Edit</button>
+      <button type="button" class="btn btn-danger btn-xs" onclick="doDelete('${esc(r.assetId)}')">Del</button>
     </div></td>`;
-    return `<tr>${cells}${actions}</tr>`;
+    return `<tr>${actions}${cells}</tr>`;
   };
 
   return `<table><thead><tr>${headers}</tr></thead><tbody>${rows.map(makeRow).join('')}</tbody></table>`;
@@ -671,6 +681,12 @@ function openAdd(){
   document.getElementById('form-save').textContent='Save';
   buildForm(null);
   openModal('modal-form');
+}
+
+function openEditById(id){
+  const rec=records.find(r=>r.assetId===id);
+  if(!rec){toast('Record not found — refresh the list','err');return;}
+  openEdit(rec);
 }
 
 function openEdit(rec){
@@ -770,9 +786,15 @@ function doDelete(id){
 }
 
 // ─── Export ───────────────────────────────────────────────────────────────────
-async function doExport(){
-  const btn=event.target.closest('button');
-  btn.disabled=true; btn.textContent='Generating…';
+function sectionExportQuery(){
+  const s=SECS[curSec];
+  if(s.types.length===1) return 'assetType='+encodeURIComponent(s.types[0]);
+  return 'assetTypes='+encodeURIComponent(s.types.join(','));
+}
+
+async function doExport(btn){
+  const el=(btn&&btn.closest)?btn.closest('button'):document.getElementById('topExportBtn');
+  el.disabled=true; const prev=el.textContent; el.textContent='Generating…';
   try {
     const {data}=await api('/assets/export');
     if(data?.url) window.open(data.url,'_blank');
@@ -780,8 +802,78 @@ async function doExport(){
   } catch(e){
     toast('Export failed: '+e.message,'err');
   } finally {
-    btn.disabled=false; btn.textContent='↓ Export All';
+    el.disabled=false; el.textContent=prev||'↓ Export All';
   }
+}
+
+async function doExportSection(btn){
+  if(curSec==='dashboard') return toast('Open a section first','info');
+  const el=btn.closest('button');
+  el.disabled=true; const prev=el.textContent; el.textContent='Generating…';
+  try {
+    const {data}=await api('/assets/export?'+sectionExportQuery());
+    if(data?.url) window.open(data.url,'_blank');
+    toast('Section Excel ready','ok');
+  } catch(e){
+    toast('Export failed: '+e.message,'err');
+  } finally {
+    el.disabled=false; el.textContent=prev;
+  }
+}
+
+// ─── Import Excel (first sheet; header row = field keys or form labels) ───────
+function handleImportFile(ev){
+  const f=ev.target.files&&ev.target.files[0];
+  ev.target.value='';
+  if(!f) return;
+  if(curSec==='dashboard') return toast('Open a section first','info');
+  if(typeof XLSX==='undefined') return toast('Spreadsheet library failed to load — check network','err');
+  const s=SECS[curSec];
+  const reader=new FileReader();
+  reader.onload=async e=>{
+    try{
+      const data=new Uint8Array(e.target.result);
+      const wb=XLSX.read(data,{type:'array'});
+      const sheet=wb.Sheets[wb.SheetNames[0]];
+      const rows=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+      if(rows.length<2){toast('Need a header row and at least one data row','err');return;}
+      const headers=rows[0].map(h=>String(h).trim());
+      const labelToKey={};
+      s.fields.forEach(f=>{labelToKey[f.l]=f.k;labelToKey[f.k]=f.k;});
+      const keyForCol=headers.map(h=>labelToKey[h]||(h&&/^[a-zA-Z][a-zA-Z0-9_]*$/.test(h)?h:''));
+      const items=[];
+      for(let ri=1;ri<rows.length;ri++){
+        const row=rows[ri];
+        const obj={};
+        let has=false;
+        keyForCol.forEach((key,ci)=>{
+          if(!key) return;
+          const v=row[ci];
+          if(v===undefined||v===null) return;
+          const str=typeof v==='number'&&key!=='gatePassNo'?String(v):(typeof v==='string'?v.trim():String(v));
+          if(str==='') return;
+          obj[key]=str;
+          has=true;
+        });
+        if(!has) continue;
+        if(s.types.length===1) obj.assetType=s.types[0];
+        else{
+          const t=obj.assetType;
+          if(!t||!s.types.includes(t)){toast('Row '+(ri+1)+': set a valid Asset Type column for this section','err');return;}
+        }
+        items.push(obj);
+      }
+      if(!items.length){toast('No data rows to import','err');return;}
+      toast('Uploading '+items.length+' row(s)…','info');
+      const res=await api('/assets/bulk',{method:'POST',body:JSON.stringify({items})});
+      const d=res.data||{};
+      const msg='Created '+ (d.created||0) +', updated '+ (d.updated||0)+
+        (d.errors&&d.errors.length?'. Issues: '+d.errors.slice(0,3).join('; '):'');
+      toast(msg, d.errors&&d.errors.length?'err':'ok');
+      loadSection();
+    }catch(err){toast('Import failed: '+err.message,'err');}
+  };
+  reader.readAsArrayBuffer(f);
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
