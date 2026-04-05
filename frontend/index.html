@@ -248,6 +248,8 @@ textarea.fc{resize:vertical;min-height:60px;}
 const API = 'https://a6ieygm0yl.execute-api.ap-south-1.amazonaws.com';
 
 const LOC  = ['India','US','UK','Sweden'];
+/** Infodesk Leavers — hardware inventory site */
+const LEAVER_HW_LOC = ['India','UK','US','Sweden'];
 const STAT = ['Active','Inactive','In Repair','Retired','Lost','In Store'];
 const LAPTOP_DESKTOP_STAT = ['Allocated','Available','To be scraped','Under Repair'];
 /** Laptops, desktops, monitors — Assigned To = Unassigned or name */
@@ -517,7 +519,8 @@ const SECS = {
       {k:'github',              l:'GitHub',                t:'sel', o:AR, def:'Active'},
       {k:'infodeskPortal',      l:'Infodesk Portal',       t:'sel', o:AR, def:'Active'},
       {k:'salesforce',          l:'Salesforce',            t:'sel', o:AR, def:'Active'},
-      {k:'hwInventoryLocation', l:'HW Inventory Location', t:'txt'},
+      {k:'hwInventoryLocation', l:'HW Inventory Location', t:'sel', o:LEAVER_HW_LOC, def:'India'},
+      {k:'hwCollectedBackEvidence', l:'Evidence for Hardware Collected Back', t:'file'},
       {k:'hwHandedOver',        l:'HW Handed Over',        t:'sel', o:['Pending','Yes','No'], def:'Pending'},
       {k:'itPeerReview',        l:'IT Peer Review',        t:'sel', o:['Pending','Approved','Rejected'], def:'Pending'},
       {k:'reportingManager',    l:'Reporting Manager',     t:'sel', o:['Pending','Approved','Rejected'], def:'Pending'},
@@ -707,9 +710,14 @@ function renderRows(rows, sec, compact){
   return `<table><thead><tr>${headers}</tr></thead><tbody>${rows.map(makeRow).join('')}</tbody></table>`;
 }
 
+function escAttr(s){
+  return String(s??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
 function badgeOrText(f,v){
   if(v===undefined||v===null||v==='') return '<span style="color:var(--muted)">—</span>';
   const s=String(v);
+  if(/^https?:\/\//i.test(s)) return `<a href="${escAttr(s)}" target="_blank" rel="noopener noreferrer">View evidence</a>`;
   const badgeMap={
     'Allocated':'b-active','Available':'b-store','To be scraped':'b-poor','Under Repair':'b-repair',
     'Active':'b-active','Inactive':'b-inactive','In Repair':'b-repair',
@@ -779,11 +787,82 @@ function buildForm(rec){
   }).join('');
 }
 
+function guessEvidenceContentType(file){
+  if(file.type) return file.type;
+  const n=file.name.toLowerCase();
+  if(n.endsWith('.pdf')) return 'application/pdf';
+  if(n.endsWith('.jpg')||n.endsWith('.jpeg')) return 'image/jpeg';
+  if(n.endsWith('.png')) return 'image/png';
+  if(n.endsWith('.webp')) return 'image/webp';
+  if(n.endsWith('.gif')) return 'image/gif';
+  return '';
+}
+
+async function runLeaverEvidenceUpload(inputId){
+  const inp=document.getElementById(inputId);
+  if(!inp||inp.type!=='file') return;
+  const file=inp.files[0];
+  if(!file){ toast('Choose a file first','info'); return; }
+  const maxBytes=15*1024*1024;
+  if(file.size>maxBytes){ toast('File too large (max 15 MB)','err'); return; }
+  const contentType=guessEvidenceContentType(file);
+  if(!contentType){ toast('Use PDF or an image file','err'); return; }
+  const wrap=inp.closest('.evidence-upload');
+  const hidden=wrap&&wrap.querySelector('input[type=hidden][data-key]');
+  if(!hidden){ toast('Form error','err'); return; }
+  try{
+    const {data}=await api('/upload/leavers-evidence',{
+      method:'POST',
+      body:JSON.stringify({ fileName:file.name, contentType }),
+    });
+    const put=await fetch(data.uploadUrl,{
+      method:'PUT',
+      headers:{ 'Content-Type':contentType },
+      body:file,
+    });
+    if(!put.ok) throw new Error('Upload failed ('+put.status+')');
+    const fullUrl=API+data.evidenceUrlPath;
+    hidden.value=fullUrl;
+    let a=wrap.querySelector('a.evidence-view');
+    if(!a){
+      a=document.createElement('a');
+      a.className='evidence-view';
+      a.target='_blank';
+      a.rel='noopener noreferrer';
+      wrap.appendChild(a);
+    }
+    a.href=fullUrl;
+    a.textContent='Open evidence';
+    a.style.display='';
+    toast('File uploaded — save the record to keep the link','ok');
+  }catch(e){
+    toast('Upload failed: '+e.message,'err');
+  }
+}
+
 function buildInput(f,val){
   const v=esc(String(val??''));
   const ro=f.ro?'readonly':'';
+  if(f.t==='file'){
+    const id='fu_'+f.k.replace(/[^a-zA-Z0-9]/g,'_')+'_'+String(Math.random()).slice(2,9);
+    const rawUrl=String(val??'').trim();
+    const linkHtml=rawUrl
+      ? `<a class="evidence-view" href="${escAttr(rawUrl)}" target="_blank" rel="noopener noreferrer">Open evidence</a>`
+      : '<a class="evidence-view" style="display:none" href="#" target="_blank" rel="noopener noreferrer">Open evidence</a>';
+    return `<div class="evidence-upload" style="display:flex;flex-direction:column;gap:6px;">
+      <input type="hidden" class="fc" data-key="${f.k}" value="${escAttr(rawUrl)}"/>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+        <input type="file" id="${id}" accept=".pdf,image/*" style="font-size:12px;max-width:240px"/>
+        <button type="button" class="btn btn-outline btn-sm" onclick="runLeaverEvidenceUpload('${id}')">Upload file</button>
+      </div>
+      ${linkHtml}
+    </div>`;
+  }
   if(f.t==='sel'){
-    const opts=(f.o||[]).map(o=>`<option${String(val??'')===o?' selected':''}>${esc(o)}</option>`).join('');
+    let optsList=f.o||[];
+    const sv=String(val??'');
+    if(sv && !optsList.includes(sv)) optsList=[sv,...optsList];
+    const opts=optsList.map(o=>`<option${sv===o?' selected':''}>${esc(o)}</option>`).join('');
     return `<select class="fc" data-key="${f.k}" ${ro}>${opts}</select>`;
   }
   if(f.t==='dl'){
@@ -811,6 +890,10 @@ async function saveRecord(){
     }
     if(SEC_WARRANTY_NO_OR_DATE.has(curSec)&&key==='warranty'){
       body[key]=v||'No Warranty';
+      return;
+    }
+    if(curSec==='leavers'&&key==='hwCollectedBackEvidence'){
+      body[key]=v;
       return;
     }
     if(v) body[key]=v;

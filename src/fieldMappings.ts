@@ -249,6 +249,7 @@ export const SECTIONS: { title: string; assetTypes: string[]; fields: FieldDef[]
       { key: 'infodeskPortal',      label: 'Infodesk Portal' },
       { key: 'salesforce',          label: 'Salesforce' },
       { key: 'hwInventoryLocation', label: 'HW Inventory Location' },
+      { key: 'hwCollectedBackEvidence', label: 'Evidence for Hardware Collected Back' },
       { key: 'hwHandedOver',        label: 'HW Handed Over' },
       { key: 'itPeerReview',        label: 'IT Peer Review' },
       { key: 'reportingManager',    label: 'Reporting Manager' },

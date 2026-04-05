@@ -308,6 +308,8 @@ const KEY_SORT_PRI = [
   'gatePassNo',
   'serviceTag',
   'employeeName',
+  'hwInventoryLocation',
+  'hwCollectedBackEvidence',
 ];
 
 function sortDynamicKeys(keys: string[]): string[] {

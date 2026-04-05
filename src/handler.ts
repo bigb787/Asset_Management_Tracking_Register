@@ -11,11 +11,35 @@ import {
   deleteAsset,
 } from './dynamodb';
 import { generateMultiTabAssetRegister, generateSectionExcel } from './excelExport';
+import {
+  assertLeaverEvidenceKey,
+  createLeaverEvidencePresignedPut,
+  getLeaverEvidencePresignedGet,
+  isAllowedEvidenceContentType,
+} from './leaversEvidence';
 import { CreateAssetInput, UpdateAssetInput, ApiResponse } from './types';
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+const LEAVER_HW_INVENTORY_LOCS = ['India', 'UK', 'US', 'Sweden'] as const;
+
+function badLeaverHwInventoryLocation(
+  assetType: unknown,
+  hwInventoryLocation: unknown,
+): string | null {
+  if (String(assetType) !== 'Leaver') return null;
+  const v =
+    hwInventoryLocation === undefined || hwInventoryLocation === null
+      ? ''
+      : String(hwInventoryLocation).trim();
+  if (!v) return null;
+  if (!(LEAVER_HW_INVENTORY_LOCS as readonly string[]).includes(v)) {
+    return `hwInventoryLocation must be one of: ${LEAVER_HW_INVENTORY_LOCS.join(', ')}`;
+  }
+  return null;
+}
+
 const JSON_HEADERS = {
   'Content-Type': 'application/json',
   'Cache-Control': 'no-store',
@@ -161,6 +185,14 @@ export async function handler(
             errors.push(`Row ${i + 1}: invalid location`);
             continue;
           }
+          const hwInvErr = badLeaverHwInventoryLocation(
+            item.assetType,
+            item.hwInventoryLocation,
+          );
+          if (hwInvErr) {
+            errors.push(`Row ${i + 1}: ${hwInvErr}`);
+            continue;
+          }
           if (id) {
             const { assetId: _omit, ...upd } = item;
             const out = await updateAsset(id, upd as UpdateAssetInput);
@@ -193,6 +225,47 @@ export async function handler(
       return ok(assets, assets.length);
     }
 
+    // ---- POST /upload/leavers-evidence (presigned S3 PUT) -------------------
+    if (method === 'POST' && path === '/upload/leavers-evidence') {
+      const body = parseBody(event);
+      if (!body || typeof body !== 'object') return badRequest('Invalid JSON body');
+      const fileName = String((body as { fileName?: string }).fileName || '').trim();
+      const contentType = String(
+        (body as { contentType?: string }).contentType || '',
+      ).trim();
+      if (!fileName) return badRequest('fileName is required');
+      if (!contentType) return badRequest('contentType is required');
+      if (!isAllowedEvidenceContentType(contentType)) {
+        return badRequest('Only PDF and common image types are allowed');
+      }
+      const { key, uploadUrl } = await createLeaverEvidencePresignedPut(
+        fileName,
+        contentType,
+      );
+      const evidenceUrlPath = `/files/leavers-evidence?key=${encodeURIComponent(key)}`;
+      return ok({ uploadUrl, key, evidenceUrlPath });
+    }
+
+    // ---- GET /files/leavers-evidence → 302 to presigned S3 GET ------------
+    if (method === 'GET' && path === '/files/leavers-evidence') {
+      const key = event.queryStringParameters?.['key']?.trim();
+      if (!key) return badRequest('key query parameter is required');
+      try {
+        assertLeaverEvidenceKey(key);
+      } catch {
+        return badRequest('Invalid key');
+      }
+      const redirectUrl = await getLeaverEvidencePresignedGet(key);
+      return {
+        statusCode: 302,
+        headers: {
+          Location: redirectUrl,
+          'Access-Control-Allow-Origin': '*',
+        },
+        body: '',
+      };
+    }
+
     // ---- POST /assets -------------------------------------------------------
     if (method === 'POST' && path === '/assets') {
       const body = parseBody(event);
@@ -206,6 +279,12 @@ export async function handler(
       if (input.location && !validLocations.includes(String(input.location))) {
         return badRequest(`location must be one of: ${validLocations.join(', ')}`);
       }
+
+      const hwErr = badLeaverHwInventoryLocation(
+        input.assetType,
+        (input as Record<string, unknown>).hwInventoryLocation,
+      );
+      if (hwErr) return badRequest(hwErr);
 
       const asset = await createAsset(
         input as Record<string, unknown> & { assetType: string },
@@ -233,6 +312,16 @@ export async function handler(
         const validLocations = ['India', 'US', 'UK', 'Sweden'];
         if (updates.location && !validLocations.includes(updates.location)) {
           return badRequest(`location must be one of: ${validLocations.join(', ')}`);
+        }
+
+        if (Object.prototype.hasOwnProperty.call(updates, 'hwInventoryLocation')) {
+          const existing = await getAsset(assetId);
+          if (!existing) return notFound();
+          const hwErr = badLeaverHwInventoryLocation(
+            existing.assetType,
+            (updates as Record<string, unknown>).hwInventoryLocation,
+          );
+          if (hwErr) return badRequest(hwErr);
         }
 
         const asset = await updateAsset(assetId, updates);

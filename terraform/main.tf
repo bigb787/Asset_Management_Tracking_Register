@@ -93,10 +93,25 @@ resource "aws_s3_bucket_lifecycle_configuration" "exports" {
   rule {
     id     = "expire-exports-30d"
     status = "Enabled"
-    filter {}
+    filter {
+      prefix = "exports/"
+    }
     expiration {
       days = 30
     }
+  }
+}
+
+# Browser uploads to presigned PUT URLs (Infodesk Leaver evidence files)
+resource "aws_s3_bucket_cors_configuration" "exports" {
+  bucket = aws_s3_bucket.exports.id
+
+  cors_rule {
+    allowed_headers = ["*"]
+    allowed_methods = ["PUT", "GET", "HEAD"]
+    allowed_origins = ["*"]
+    expose_headers  = ["ETag"]
+    max_age_seconds = 3600
   }
 }
 
