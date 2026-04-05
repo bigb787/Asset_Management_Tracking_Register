@@ -230,6 +230,10 @@ const API = 'https://a6ieygm0yl.execute-api.ap-south-1.amazonaws.com';
 const LOC  = ['India','US','UK','Sweden'];
 const STAT = ['Active','Inactive','In Repair','Retired','Lost','In Store'];
 const LAPTOP_DESKTOP_STAT = ['Allocated','Available','To be scraped','Under Repair'];
+/** Laptops, desktops, monitors — Assigned To = Unassigned or name */
+const SEC_ASSIGNED_UNASSIGNED = new Set(['laptops','desktops','monitors']);
+/** Laptops, desktops, monitors, UPS, mobiles, scanners, cameras — warranty = No Warranty or date */
+const SEC_WARRANTY_NO_OR_DATE = new Set(['laptops','desktops','monitors','ups','mobiles','scanners','cameras']);
 const HLTH = ['Good','Fair','Poor'];
 const PII  = ['Yes','No'];
 const AR   = ['Active','Revoked'];
@@ -252,7 +256,7 @@ const SECS = {
       {k:'department',     l:'Dept',                 t:'txt'},
       {k:'location',       l:'Location',             t:'sel', o:LOC},
       {k:'assetHealth',    l:'Asset Health',         t:'sel', o:HLTH, def:'Good'},
-      {k:'warranty',       l:'Warranty',             t:'txt'},
+      {k:'warranty',       l:'Warranty',             t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'installDate',    l:'Install Date',         t:'date'},
       {k:'dateAdded',      l:'Date Added/Updated',   t:'date'},
       {k:'processor',      l:'Processor',            t:'txt'},
@@ -283,7 +287,7 @@ const SECS = {
       {k:'department',    l:'Dept',                t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'assetHealth',   l:'Asset Health',        t:'sel', o:HLTH, def:'Good'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'installDate',   l:'Install Date',        t:'date'},
       {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
       {k:'processor',     l:'Processor',           t:'txt'},
@@ -303,12 +307,12 @@ const SECS = {
       {k:'model',         l:'Model',               t:'txt'},
       {k:'partNumber',    l:'P/N',                 t:'txt'},
       {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
-      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
-      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
+      {k:'assignedTo',    l:'Assigned To',         t:'dl', o:['Unassigned'], def:'Unassigned', ph:'Pick Unassigned or type a name'},
+      {k:'status',        l:'Asset Status',        t:'sel', o:LAPTOP_DESKTOP_STAT, def:'Available'},
       {k:'department',    l:'Dept',                t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'assetHealth',   l:'Asset Health',        t:'sel', o:HLTH, def:'Good'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'installDate',   l:'Install Date',        t:'date'},
       {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
       {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
@@ -409,7 +413,7 @@ const SECS = {
       {k:'deviceId',      l:'Device Id',           t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'model',         l:'Model',               t:'txt'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'installDate',   l:'Install Date',        t:'date'},
       {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
       {k:'department',    l:'Dept',                t:'txt'},
@@ -427,7 +431,7 @@ const SECS = {
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'model',         l:'Model',               t:'txt'},
       {k:'partNumber',    l:'P/N',                 t:'txt'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
       {k:'department',    l:'Dept',                t:'txt'},
       {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
@@ -445,7 +449,7 @@ const SECS = {
       {k:'model',         l:'Model',               t:'txt'},
       {k:'serviceTag',    l:'Service Tag',         t:'txt'},
       {k:'partNumber',    l:'P/N',                 t:'txt'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
       {k:'department',    l:'Dept',                t:'txt'},
       {k:'description',   l:'Description',         t:'area'},
@@ -461,7 +465,7 @@ const SECS = {
       {k:'assetType',     l:'Asset Type',          t:'sel', o:['Camera','DVR']},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'invoiceNo',     l:'Invoice No',          t:'txt'},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
       {k:'installDate',   l:'Install Date',        t:'date'},
       {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
       {k:'department',    l:'Dept',                t:'txt'},
@@ -697,7 +701,7 @@ function badgeOrText(f,v){
     'Allocated':'b-active','Available':'b-store','To be scraped':'b-poor','Under Repair':'b-repair',
     'Active':'b-active','Inactive':'b-inactive','In Repair':'b-repair',
     'Retired':'b-retired','Lost':'b-inactive','In Store':'b-store',
-    'Unassigned':'b-retired',
+    'Unassigned':'b-retired','No Warranty':'b-retired',
     'Revoked':'b-revoked','Good':'b-good','Fair':'b-fair','Poor':'b-poor',
     'Open':'b-open','Returned':'b-returned','Closed':'b-closed',
     'Yes':'b-yes','No':'b-no','Pending':'b-pending',
@@ -753,6 +757,7 @@ function buildForm(rec){
   document.getElementById('form-fields').innerHTML = s.fields.map(f=>{
     let val = rec ? (rec[f.k]??'') : (f.k==='gatePassNo'?gpNo:(f.def??''));
     if(rec && f.t==='dl' && f.k==='assignedTo' && !String(val).trim()) val=f.def??'Unassigned';
+    if(rec && f.t==='dl' && f.k==='warranty' && !String(val).trim()) val=f.def??'No Warranty';
     const wide = f.t==='area' || ['configuration','assetItems','remarks','description'].includes(f.k);
     return `<div class="fg${wide?' full':''}">
       <label>${esc(f.l)}</label>
@@ -787,8 +792,12 @@ async function saveRecord(){
   document.querySelectorAll('#form-fields [data-key]').forEach(el=>{
     const key=el.dataset.key;
     const v=el.value.trim();
-    if((curSec==='laptops'||curSec==='desktops')&&key==='assignedTo'){
+    if(SEC_ASSIGNED_UNASSIGNED.has(curSec)&&key==='assignedTo'){
       body[key]=v||'Unassigned';
+      return;
+    }
+    if(SEC_WARRANTY_NO_OR_DATE.has(curSec)&&key==='warranty'){
+      body[key]=v||'No Warranty';
       return;
     }
     if(v) body[key]=v;
