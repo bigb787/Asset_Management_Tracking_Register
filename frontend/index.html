@@ -3,723 +3,788 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Asset Manager</title>
+<title>Employee Asset Register</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  :root {
-    --blue: #185FA5;
-    --blue-light: #E6F1FB;
-    --green: #1D9E75;
-    --red: #E03C3C;
-    --yellow: #F5A623;
-    --gray-50: #F8F9FA;
-    --gray-100: #F1F3F5;
-    --gray-200: #E9ECEF;
-    --gray-400: #ADB5BD;
-    --gray-600: #6C757D;
-    --gray-800: #343A40;
-    --border: #E2E8F0;
-    --text: #1A202C;
-    --text-muted: #718096;
-    --shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
-    --shadow-md: 0 4px 6px rgba(0,0,0,.07), 0 2px 4px rgba(0,0,0,.06);
-    --radius: 8px;
-    --sidebar-w: 220px;
-    --topbar-h: 56px;
-  }
-
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; color: var(--text); background: var(--gray-50); }
-
-  /* ── Top Bar ── */
-  .topbar {
-    position: fixed; top: 0; left: 0; right: 0; height: var(--topbar-h);
-    background: #fff; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; padding: 0 24px; gap: 12px; z-index: 100;
-  }
-  .topbar-logo { display: flex; align-items: center; gap: 10px; flex: 1; }
-  .topbar-icon { width: 32px; height: 32px; background: var(--blue); border-radius: 7px; display: grid; place-items: center; }
-  .topbar-icon svg { width: 18px; height: 18px; fill: #fff; }
-  .topbar-title { font-size: 16px; font-weight: 700; color: var(--text); }
-  .iso-badge { font-size: 10px; font-weight: 600; background: #D1FAE5; color: #065F46; border: 1px solid #A7F3D0; border-radius: 20px; padding: 2px 8px; white-space: nowrap; }
-  .topbar-actions { display: flex; gap: 8px; }
-  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: filter .15s; white-space: nowrap; }
-  .btn:hover { filter: brightness(.92); }
-  .btn-primary { background: var(--blue); color: #fff; }
-  .btn-success { background: var(--green); color: #fff; }
-  .btn-danger  { background: var(--red);   color: #fff; }
-  .btn-outline { background: #fff; color: var(--text); border: 1px solid var(--border); }
-  .btn-sm { padding: 5px 10px; font-size: 12px; }
-
-  /* ── Sidebar ── */
-  .sidebar {
-    position: fixed; top: var(--topbar-h); left: 0; bottom: 0;
-    width: var(--sidebar-w); background: #fff;
-    border-right: 1px solid var(--border); overflow-y: auto; z-index: 90;
-  }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 13px 20px; cursor: pointer; font-size: 13px;
-    font-weight: 500; color: var(--text-muted); border-left: 3px solid transparent;
-    transition: background .12s, color .12s;
-  }
-  .nav-item:hover { background: var(--gray-50); }
-  .nav-item.active { background: var(--blue-light); color: var(--blue); border-left-color: var(--blue); }
-  .nav-item .nav-icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
-  .nav-divider { height: 1px; background: var(--border); margin: 8px 0; }
-
-  /* ── Main Content ── */
-  .main { margin-left: var(--sidebar-w); margin-top: var(--topbar-h); padding: 24px; min-height: calc(100vh - var(--topbar-h)); }
-
-  /* ── Section panels ── */
-  .section { display: none; }
-  .section.active { display: block; }
-
-  /* ── Stat Cards ── */
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .stat-card { background: #fff; border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow); border: 1px solid var(--border); }
-  .stat-card .label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); margin-bottom: 8px; }
-  .stat-card .value { font-size: 28px; font-weight: 700; color: var(--blue); }
-  .stat-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
-
-  /* ── Card ── */
-  .card { background: #fff; border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid var(--border); }
-  .card-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .card-title { font-size: 15px; font-weight: 600; flex: 1; }
-  .card-body { padding: 0; }
-
-  /* ── Filters ── */
-  .filters { display: flex; gap: 8px; flex-wrap: wrap; }
-  .filter-input { padding: 7px 11px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; }
-  .filter-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,.1); }
-  select.filter-input { min-width: 130px; background: #fff; }
-
-  /* ── Table ── */
-  .table-wrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th { padding: 11px 14px; background: var(--gray-50); border-bottom: 1px solid var(--border); font-weight: 600; color: var(--text-muted); white-space: nowrap; text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .4px; }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .1s; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: var(--gray-50); }
-  tbody td { padding: 11px 14px; vertical-align: middle; }
-  .td-actions { display: flex; gap: 6px; }
-
-  /* ── Badges ── */
-  .badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .badge-active   { background: #D1FAE5; color: #065F46; }
-  .badge-repair   { background: #FEF3C7; color: #92400E; }
-  .badge-retired  { background: var(--gray-200); color: var(--gray-600); }
-  .badge-lost     { background: #FEE2E2; color: #991B1B; }
-  .badge-store    { background: #DBEAFE; color: #1E40AF; }
-
-  /* ── Empty state ── */
-  .empty { text-align: center; padding: 48px 24px; color: var(--text-muted); }
-  .empty svg { width: 48px; height: 48px; margin-bottom: 12px; opacity: .3; }
-  .empty p { font-size: 13px; }
-
-  /* ── Loading ── */
-  .loading { text-align: center; padding: 32px; color: var(--text-muted); font-size: 13px; }
-  .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin .7s linear infinite; margin-right: 8px; vertical-align: middle; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Modal ── */
-  .modal-backdrop { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
-  .modal-backdrop.open { display: flex; }
-  .modal { background: #fff; border-radius: 12px; width: 560px; max-width: 95vw; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.2); }
-  .modal-header { padding: 20px 24px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
-  .modal-title { font-size: 16px; font-weight: 700; }
-  .modal-close { width: 28px; height: 28px; border-radius: 6px; background: var(--gray-100); border: none; cursor: pointer; display: grid; place-items: center; font-size: 16px; color: var(--text-muted); }
-  .modal-close:hover { background: var(--gray-200); }
-  .modal-body { padding: 20px 24px; }
-  .modal-footer { padding: 16px 24px 20px; display: flex; gap: 8px; justify-content: flex-end; border-top: 1px solid var(--border); }
-
-  /* ── Form ── */
-  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .form-group { display: flex; flex-direction: column; gap: 5px; }
-  .form-group.full { grid-column: 1 / -1; }
-  label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
-  .form-control { padding: 9px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 13px; outline: none; background: #fff; }
-  .form-control:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,.1); }
-  textarea.form-control { resize: vertical; min-height: 70px; }
-
-  /* ── Toast ── */
-  #toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 999; display: flex; flex-direction: column; gap: 8px; }
-  .toast { padding: 12px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; color: #fff; box-shadow: var(--shadow-md); animation: slideIn .2s ease; max-width: 320px; }
-  .toast-success { background: var(--green); }
-  .toast-error   { background: var(--red); }
-  .toast-info    { background: var(--blue); }
-  @keyframes slideIn { from { transform: translateY(12px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-  /* ── Confirm dialog ── */
-  .confirm-body { text-align: center; padding: 8px 0; }
-  .confirm-body p { color: var(--text-muted); font-size: 13px; margin-top: 8px; }
-
-  /* ── Page header ── */
-  .page-header { margin-bottom: 20px; }
-  .page-header h2 { font-size: 20px; font-weight: 700; }
-  .page-header p { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --blue:#185FA5; --blue-lt:#E6F1FB; --green:#1D9E75; --red:#D93025;
+  --yellow:#F5A623; --border:#E2E8F0; --bg:#F7F8FA;
+  --text:#1A202C; --muted:#718096; --sidebar:220px; --top:56px;
+  --shadow:0 1px 3px rgba(0,0,0,.08); --radius:8px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;color:var(--text);background:var(--bg);}
+/* TOP BAR */
+.topbar{position:fixed;top:0;left:0;right:0;height:var(--top);background:#fff;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:10px;z-index:200;}
+.tlogo{display:flex;align-items:center;gap:8px;flex:1;}
+.ticon{width:30px;height:30px;background:var(--blue);border-radius:7px;display:grid;place-items:center;}
+.ticon svg{width:17px;fill:#fff;}
+.ttitle{font-size:15px;font-weight:700;}
+.iso-badge{font-size:10px;font-weight:600;background:#D1FAE5;color:#065F46;border:1px solid #A7F3D0;border-radius:20px;padding:2px 8px;}
+.btn{display:inline-flex;align-items:center;gap:5px;padding:7px 14px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;transition:filter .15s;white-space:nowrap;}
+.btn:disabled{opacity:.6;cursor:not-allowed;}
+.btn:not(:disabled):hover{filter:brightness(.9);}
+.btn-primary{background:var(--blue);color:#fff;}
+.btn-success{background:var(--green);color:#fff;}
+.btn-danger{background:var(--red);color:#fff;}
+.btn-outline{background:#fff;color:var(--text);border:1px solid var(--border);}
+.btn-sm{padding:4px 9px;font-size:11px;}
+.btn-xs{padding:3px 7px;font-size:11px;}
+/* SIDEBAR */
+.sidebar{position:fixed;top:var(--top);left:0;bottom:0;width:var(--sidebar);background:#fff;border-right:1px solid var(--border);overflow-y:auto;z-index:100;}
+.nav-group{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);padding:14px 16px 4px;}
+.nav-item{display:flex;align-items:center;gap:8px;padding:9px 16px;cursor:pointer;font-size:12px;font-weight:500;color:var(--muted);border-left:3px solid transparent;transition:background .12s;}
+.nav-item:hover{background:var(--bg);}
+.nav-item.active{background:var(--blue-lt);color:var(--blue);border-left-color:var(--blue);}
+.nav-item .ni{font-size:14px;width:18px;text-align:center;flex-shrink:0;}
+/* MAIN */
+.main{margin-left:var(--sidebar);margin-top:var(--top);padding:20px;min-height:calc(100vh - var(--top));}
+/* SECTION HEADER */
+.sec-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;}
+.sec-title{font-size:18px;font-weight:700;}
+.sec-sub{font-size:12px;color:var(--muted);margin-top:1px;}
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px;}
+.search-input{padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;width:200px;}
+.search-input:focus{border-color:var(--blue);}
+.rec-count{font-size:11px;color:var(--muted);margin-left:auto;}
+/* CARD */
+.card{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);border:1px solid var(--border);}
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:12px;}
+thead th{padding:9px 12px;background:var(--bg);border-bottom:1px solid var(--border);font-weight:600;color:var(--muted);white-space:nowrap;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.3px;position:sticky;top:0;}
+tbody tr{border-bottom:1px solid var(--border);transition:background .1s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#F8FAFC;}
+tbody td{padding:9px 12px;vertical-align:middle;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;}
+.td-actions{display:flex;gap:4px;white-space:nowrap;}
+/* BADGES */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;}
+.b-active{background:#D1FAE5;color:#065F46;}
+.b-inactive{background:#FEE2E2;color:#991B1B;}
+.b-repair{background:#FEF3C7;color:#92400E;}
+.b-retired{background:#E5E7EB;color:#374151;}
+.b-lost{background:#FEE2E2;color:#991B1B;}
+.b-store{background:#DBEAFE;color:#1E40AF;}
+.b-revoked{background:#FEE2E2;color:#991B1B;}
+.b-good{background:#D1FAE5;color:#065F46;}
+.b-fair{background:#FEF3C7;color:#92400E;}
+.b-poor{background:#FEE2E2;color:#991B1B;}
+.b-open{background:#DBEAFE;color:#1E40AF;}
+.b-returned{background:#D1FAE5;color:#065F46;}
+.b-closed{background:#E5E7EB;color:#374151;}
+.b-yes{background:#FEE2E2;color:#991B1B;}
+.b-no{background:#D1FAE5;color:#065F46;}
+.b-pending{background:#FEF3C7;color:#92400E;}
+.b-progress{background:#DBEAFE;color:#1E40AF;}
+.b-complete{background:#D1FAE5;color:#065F46;}
+/* EMPTY / LOADING */
+.empty{text-align:center;padding:48px 24px;color:var(--muted);}
+.empty p{margin-top:8px;font-size:12px;}
+.loading{text-align:center;padding:32px;color:var(--muted);font-size:12px;}
+.spin{display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+/* STATS GRID (dashboard) */
+.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px;}
+.stat{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);}
+.stat .lbl{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);margin-bottom:6px;}
+.stat .val{font-size:24px;font-weight:700;color:var(--blue);}
+/* MODAL */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;}
+.overlay.show{display:flex;}
+.modal{background:#fff;border-radius:12px;width:680px;max-width:100%;box-shadow:0 20px 60px rgba(0,0,0,.2);margin:auto;}
+.modal-hdr{padding:18px 22px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-hdr h3{font-size:15px;font-weight:700;}
+.modal-close{width:26px;height:26px;border-radius:5px;background:var(--bg);border:none;cursor:pointer;font-size:15px;color:var(--muted);}
+.modal-close:hover{background:var(--border);}
+.modal-body{padding:18px 22px;max-height:65vh;overflow-y:auto;}
+.modal-ftr{padding:14px 22px 18px;display:flex;gap:8px;justify-content:flex-end;border-top:1px solid var(--border);}
+/* FORM */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fg{display:flex;flex-direction:column;gap:4px;}
+.fg.full{grid-column:1/-1;}
+.fg label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.3px;}
+.fc{padding:8px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;outline:none;background:#fff;width:100%;}
+.fc:focus{border-color:var(--blue);}
+.fc[readonly]{background:var(--bg);color:var(--muted);}
+textarea.fc{resize:vertical;min-height:60px;}
+/* TOAST */
+#toasts{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;}
+.toast{padding:10px 16px;border-radius:8px;font-size:12px;font-weight:500;color:#fff;animation:tIn .2s ease;max-width:300px;}
+.t-ok{background:var(--green);}
+.t-err{background:var(--red);}
+.t-info{background:var(--blue);}
+@keyframes tIn{from{transform:translateY(10px);opacity:0}to{transform:translateY(0);opacity:1}}
+/* CONFIRM */
+.confirm-body{text-align:center;padding:8px 0;}
+.confirm-body p{color:var(--muted);font-size:12px;margin-top:8px;}
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════ TOP BAR ═══════════════════════════════ -->
+<!-- TOP BAR -->
 <header class="topbar">
-  <div class="topbar-logo">
-    <div class="topbar-icon">
-      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9H5v-2h6v2zm8 0h-6v-2h6v2zM4 5h16v2H4z"/></svg>
-    </div>
-    <span class="topbar-title">Asset Manager</span>
+  <div class="tlogo">
+    <div class="ticon"><svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9H5v-2h6v2zm8 0h-6v-2h6v2zM4 5h16v2H4z"/></svg></div>
+    <span class="ttitle">Employee Asset Register</span>
     <span class="iso-badge">ISO 27001 ✓</span>
   </div>
-  <div class="topbar-actions">
-    <button class="btn btn-primary" onclick="openAddModal()">
-      <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"/></svg>
-      Add Asset
-    </button>
-    <button class="btn btn-success" onclick="exportExcel()">
-      <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
-      Export All
-    </button>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-primary" id="topAddBtn" onclick="openAdd()">＋ Add Asset</button>
+    <button class="btn btn-success" onclick="doExport()">↓ Export All</button>
   </div>
 </header>
 
-<!-- ═══════════════════════════════ SIDEBAR ══════════════════════════════ -->
+<!-- SIDEBAR -->
 <nav class="sidebar">
-  <div class="nav-item active" onclick="showSection('dashboard')" id="nav-dashboard">
-    <span class="nav-icon">📊</span> Dashboard
-  </div>
-  <div class="nav-item" onclick="showSection('assets')" id="nav-assets">
-    <span class="nav-icon">💼</span> All Assets
-  </div>
-  <div class="nav-divider"></div>
-  <div class="nav-item" onclick="showSection('assets','Laptop')" id="nav-laptop">
-    <span class="nav-icon">💻</span> Laptops
-  </div>
-  <div class="nav-item" onclick="showSection('assets','Desktop')" id="nav-desktop">
-    <span class="nav-icon">🖥️</span> Desktops
-  </div>
-  <div class="nav-item" onclick="showSection('assets','Monitor')" id="nav-monitor">
-    <span class="nav-icon">🖵</span> Monitors
-  </div>
-  <div class="nav-item" onclick="showSection('assets','Mobile Phone')" id="nav-mobile">
-    <span class="nav-icon">📱</span> Mobile Phones
-  </div>
-  <div class="nav-divider"></div>
-  <div class="nav-item" onclick="showSection('assets','Switch')" id="nav-network">
-    <span class="nav-icon">🌐</span> Networking
-  </div>
-  <div class="nav-item" onclick="showSection('assets','UPS')" id="nav-ups">
-    <span class="nav-icon">🔋</span> UPS
-  </div>
-  <div class="nav-item" onclick="showSection('assets','Camera')" id="nav-camera">
-    <span class="nav-icon">📷</span> Cameras
-  </div>
+  <div class="nav-group">Overview</div>
+  <div class="nav-item active" id="nav-dashboard" onclick="goTo('dashboard')"><span class="ni">📊</span>Dashboard</div>
+
+  <div class="nav-group">Employee Devices</div>
+  <div class="nav-item" id="nav-laptops"     onclick="goTo('laptops')"><span class="ni">💻</span>Laptops</div>
+  <div class="nav-item" id="nav-desktops"    onclick="goTo('desktops')"><span class="ni">🖥️</span>Desktops</div>
+  <div class="nav-item" id="nav-monitors"    onclick="goTo('monitors')"><span class="ni">🖵</span>Monitors</div>
+  <div class="nav-item" id="nav-accessories" onclick="goTo('accessories')"><span class="ni">⌨️</span>Accessories</div>
+
+  <div class="nav-group">Infrastructure</div>
+  <div class="nav-item" id="nav-networking"  onclick="goTo('networking')"><span class="ni">🌐</span>Networking</div>
+  <div class="nav-item" id="nav-cloud"       onclick="goTo('cloud')"><span class="ni">☁️</span>Cloud Asset Register</div>
+
+  <div class="nav-group">Software</div>
+  <div class="nav-item" id="nav-infodesk"    onclick="goTo('infodesk')"><span class="ni">🖥️</span>Infodesk Applications</div>
+  <div class="nav-item" id="nav-thirdparty"  onclick="goTo('thirdparty')"><span class="ni">📦</span>Third Party Software</div>
+
+  <div class="nav-group">Admin Devices</div>
+  <div class="nav-item" id="nav-ups"         onclick="goTo('ups')"><span class="ni">🔋</span>UPS</div>
+  <div class="nav-item" id="nav-mobiles"     onclick="goTo('mobiles')"><span class="ni">📱</span>Mobile Phones</div>
+  <div class="nav-item" id="nav-scanners"    onclick="goTo('scanners')"><span class="ni">🖨️</span>Scanners &amp; Printers</div>
+  <div class="nav-item" id="nav-cameras"     onclick="goTo('cameras')"><span class="ni">📷</span>Cameras &amp; DVR</div>
+
+  <div class="nav-group">Operations</div>
+  <div class="nav-item" id="nav-gatepass"    onclick="goTo('gatepass')"><span class="ni">🎫</span>Gate Pass</div>
+  <div class="nav-item" id="nav-leavers"     onclick="goTo('leavers')"><span class="ni">👤</span>Infodesk Leavers</div>
 </nav>
 
-<!-- ═══════════════════════════════ MAIN ═════════════════════════════════ -->
-<main class="main">
-
-  <!-- DASHBOARD -->
-  <div id="section-dashboard" class="section active">
-    <div class="page-header">
-      <h2>Dashboard</h2>
-      <p>Overview of all assets</p>
-    </div>
-    <div class="stats-grid" id="stats-grid">
-      <div class="stat-card"><div class="label">Total Assets</div><div class="value" id="stat-total">—</div></div>
-      <div class="stat-card"><div class="label">Active</div><div class="value" id="stat-active" style="color:var(--green)">—</div></div>
-      <div class="stat-card"><div class="label">In Repair</div><div class="value" id="stat-repair" style="color:var(--yellow)">—</div></div>
-      <div class="stat-card"><div class="label">Retired</div><div class="value" id="stat-retired" style="color:var(--text-muted)">—</div></div>
-      <div class="stat-card"><div class="label">Laptops</div><div class="value" id="stat-laptop">—</div></div>
-      <div class="stat-card"><div class="label">Desktops</div><div class="value" id="stat-desktop">—</div></div>
-      <div class="stat-card"><div class="label">Monitors</div><div class="value" id="stat-monitor">—</div></div>
-      <div class="stat-card"><div class="label">Mobile Phones</div><div class="value" id="stat-mobile">—</div></div>
-    </div>
-
-    <!-- Recent assets -->
-    <div class="card">
-      <div class="card-header">
-        <span class="card-title">Recent Assets</span>
-        <button class="btn btn-outline btn-sm" onclick="showSection('assets')">View All</button>
-      </div>
-      <div class="card-body table-wrap" id="recent-table-wrap">
-        <div class="loading"><span class="spinner"></span>Loading…</div>
-      </div>
-    </div>
+<!-- MAIN -->
+<main class="main" id="main">
+  <div id="sec-dashboard">
+    <div class="sec-header"><div><div class="sec-title">Dashboard</div><div class="sec-sub">Asset overview</div></div></div>
+    <div class="stats" id="dash-stats"><div class="loading"><span class="spin"></span>Loading…</div></div>
+    <div class="card"><div style="padding:14px 16px;font-weight:600;font-size:13px;border-bottom:1px solid var(--border);">Recent Records (last 20)</div><div class="tbl-wrap" id="dash-recent"><div class="loading"><span class="spin"></span></div></div></div>
   </div>
-
-  <!-- ASSETS TABLE -->
-  <div id="section-assets" class="section">
-    <div class="page-header">
-      <h2 id="assets-title">All Assets</h2>
-      <p id="assets-sub">Showing all asset records</p>
+  <div id="sec-table" style="display:none;">
+    <div class="sec-header">
+      <div><div class="sec-title" id="tbl-title"></div><div class="sec-sub" id="tbl-sub"></div></div>
+      <button class="btn btn-primary" onclick="openAdd()">＋ Add</button>
     </div>
-    <div class="card">
-      <div class="card-header">
-        <div class="filters">
-          <input type="text" class="filter-input" id="filter-search" placeholder="🔍  Search…" oninput="applyFilters()" style="width:200px">
-          <select class="filter-input" id="filter-type" onchange="applyFilters()">
-            <option value="">All Types</option>
-            <option>Laptop</option><option>Desktop</option><option>Monitor</option>
-            <option>Keyboard</option><option>Mouse</option><option>Headphone</option>
-            <option>USB Extender</option><option>UPS</option><option>Mobile Phone</option>
-            <option>Scanner</option><option>Printer</option><option>Camera</option>
-            <option>DVR</option><option>Switch</option><option>Router</option>
-            <option>Firewall</option><option>Other</option>
-          </select>
-          <select class="filter-input" id="filter-location" onchange="applyFilters()">
-            <option value="">All Locations</option>
-            <option>India</option><option>US</option><option>UK</option><option>Sweden</option>
-          </select>
-          <select class="filter-input" id="filter-status" onchange="applyFilters()">
-            <option value="">All Status</option>
-            <option>Active</option><option>In Repair</option><option>Retired</option>
-            <option>Lost</option><option>In Store</option>
-          </select>
-        </div>
-        <span id="asset-count" style="font-size:12px;color:var(--text-muted)"></span>
-      </div>
-      <div class="card-body table-wrap" id="assets-table-wrap">
-        <div class="loading"><span class="spinner"></span>Loading…</div>
-      </div>
+    <div class="toolbar">
+      <input class="search-input" id="tbl-search" placeholder="🔍  Search…" oninput="renderTable()">
+      <span class="rec-count" id="tbl-count"></span>
     </div>
+    <div class="card"><div class="tbl-wrap" id="tbl-wrap"><div class="loading"><span class="spin"></span>Loading…</div></div></div>
   </div>
-
 </main>
 
-<!-- ═══════════════════════════════ ADD/EDIT MODAL ═══════════════════════ -->
-<div class="modal-backdrop" id="modal-asset">
+<!-- ADD/EDIT MODAL -->
+<div class="overlay" id="modal-form">
   <div class="modal">
-    <div class="modal-header">
-      <span class="modal-title" id="modal-title">Add Asset</span>
-      <button class="modal-close" onclick="closeModal('modal-asset')">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="form-grid">
-        <div class="form-group">
-          <label>Asset Name *</label>
-          <input class="form-control" id="f-name" placeholder="e.g. Dell XPS 15">
-        </div>
-        <div class="form-group">
-          <label>Asset Type *</label>
-          <select class="form-control" id="f-type">
-            <option value="">— Select —</option>
-            <option>Laptop</option><option>Desktop</option><option>Monitor</option>
-            <option>Keyboard</option><option>Mouse</option><option>Headphone</option>
-            <option>USB Extender</option><option>UPS</option><option>Mobile Phone</option>
-            <option>Scanner</option><option>Printer</option><option>Camera</option>
-            <option>DVR</option><option>Switch</option><option>Router</option>
-            <option>Firewall</option><option>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Manufacturer</label>
-          <input class="form-control" id="f-mfr" placeholder="e.g. Dell, Apple, HP">
-        </div>
-        <div class="form-group">
-          <label>Model</label>
-          <input class="form-control" id="f-model" placeholder="e.g. XPS 15 9500">
-        </div>
-        <div class="form-group">
-          <label>Serial Number</label>
-          <input class="form-control" id="f-serial" placeholder="e.g. SN-12345">
-        </div>
-        <div class="form-group">
-          <label>Location *</label>
-          <select class="form-control" id="f-location">
-            <option value="">— Select —</option>
-            <option>India</option><option>US</option><option>UK</option><option>Sweden</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Assigned To</label>
-          <input class="form-control" id="f-assigned" placeholder="Employee name">
-        </div>
-        <div class="form-group">
-          <label>Department</label>
-          <input class="form-control" id="f-dept" placeholder="e.g. Engineering">
-        </div>
-        <div class="form-group">
-          <label>Status</label>
-          <select class="form-control" id="f-status">
-            <option>Active</option><option>In Repair</option><option>Retired</option>
-            <option>Lost</option><option>In Store</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Purchase Date</label>
-          <input class="form-control" id="f-purchase" type="date">
-        </div>
-        <div class="form-group">
-          <label>Warranty Expiry</label>
-          <input class="form-control" id="f-warranty" type="date">
-        </div>
-        <div class="form-group full">
-          <label>Notes</label>
-          <textarea class="form-control" id="f-notes" placeholder="Any additional notes…"></textarea>
-        </div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-outline" onclick="closeModal('modal-asset')">Cancel</button>
-      <button class="btn btn-primary" onclick="saveAsset()" id="save-btn">Save Asset</button>
+    <div class="modal-hdr"><h3 id="form-title">Add Record</h3><button class="modal-close" onclick="closeModal('modal-form')">✕</button></div>
+    <div class="modal-body"><div class="form-grid" id="form-fields"></div></div>
+    <div class="modal-ftr">
+      <button class="btn btn-outline" onclick="closeModal('modal-form')">Cancel</button>
+      <button class="btn btn-primary" id="form-save" onclick="saveRecord()">Save</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ CONFIRM MODAL ════════════════════════ -->
-<div class="modal-backdrop" id="modal-confirm">
-  <div class="modal" style="width:400px">
-    <div class="modal-header">
-      <span class="modal-title">Confirm Delete</span>
-      <button class="modal-close" onclick="closeModal('modal-confirm')">✕</button>
-    </div>
-    <div class="modal-body confirm-body">
-      <div style="font-size:40px">🗑️</div>
-      <p>Are you sure you want to delete this asset? This action cannot be undone.</p>
-    </div>
-    <div class="modal-footer">
+<!-- CONFIRM DELETE -->
+<div class="overlay" id="modal-confirm">
+  <div class="modal" style="width:380px;">
+    <div class="modal-hdr"><h3>Confirm Delete</h3><button class="modal-close" onclick="closeModal('modal-confirm')">✕</button></div>
+    <div class="modal-body confirm-body"><div style="font-size:36px">🗑️</div><p>Delete this record? This cannot be undone.</p></div>
+    <div class="modal-ftr">
       <button class="btn btn-outline" onclick="closeModal('modal-confirm')">Cancel</button>
-      <button class="btn btn-danger" id="confirm-delete-btn">Delete</button>
+      <button class="btn btn-danger" id="confirm-btn">Delete</button>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════ TOAST ════════════════════════════════ -->
-<div id="toast-container"></div>
+<div id="toasts"></div>
 
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// Config
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Config ───────────────────────────────────────────────────────────────────
 const API = 'https://a6ieygm0yl.execute-api.ap-south-1.amazonaws.com';
 
-// ─────────────────────────────────────────────────────────────────────────────
-// State
-// ─────────────────────────────────────────────────────────────────────────────
-let allAssets = [];
-let editingId = null;
-let activeType = '';
+const LOC  = ['India','US','UK','Sweden'];
+const STAT = ['Active','Inactive','In Repair','Retired','Lost','In Store'];
+const HLTH = ['Good','Fair','Poor'];
+const PII  = ['Yes','No'];
+const AR   = ['Active','Revoked'];
 
-// ─────────────────────────────────────────────────────────────────────────────
-// API helpers
-// ─────────────────────────────────────────────────────────────────────────────
-async function apiFetch(path, opts = {}) {
-  const res = await fetch(API + path, {
-    headers: { 'Content-Type': 'application/json', ...opts.headers },
-    ...opts,
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json.message || `HTTP ${res.status}`);
-  return json;
+// Section definitions — k=field key, l=label, t=type, o=options, def=default
+const SECS = {
+  laptops:{
+    title:'Laptops', icon:'💻', sub:'Employee Devices',
+    types:['Laptop'],
+    fields:[
+      {k:'assetType',      l:'Asset Type',          t:'sel', o:['Laptop'],  def:'Laptop'},
+      {k:'manufacturer',   l:'Asset Manufacturer',  t:'txt'},
+      {k:'serviceTag',     l:'Service Tag',          t:'txt'},
+      {k:'model',          l:'Model',                t:'txt'},
+      {k:'partNumber',     l:'P/N',                  t:'txt'},
+      {k:'assetOwner',     l:'Asset Owner',          t:'txt'},
+      {k:'assignedTo',     l:'Assigned To',          t:'txt'},
+      {k:'status',         l:'Asset Status',         t:'sel', o:STAT, def:'Active'},
+      {k:'lastOwner',      l:'Last Owner',           t:'txt'},
+      {k:'department',     l:'Dept',                 t:'txt'},
+      {k:'location',       l:'Location',             t:'sel', o:LOC},
+      {k:'assetHealth',    l:'Asset Health',         t:'sel', o:HLTH, def:'Good'},
+      {k:'warranty',       l:'Warranty',             t:'txt'},
+      {k:'installDate',    l:'Install Date',         t:'date'},
+      {k:'dateAdded',      l:'Date Added/Updated',   t:'date'},
+      {k:'processor',      l:'Processor',            t:'txt'},
+      {k:'ram',            l:'RAM',                  t:'txt'},
+      {k:'hardDisk',       l:'Hard Disk',            t:'txt'},
+      {k:'os',             l:'O/S',                  t:'txt'},
+      {k:'supportVendor',  l:'Supt Vendor',          t:'txt'},
+      {k:'keyboard',       l:'Keyboard',             t:'txt'},
+      {k:'mouse',          l:'Mouse',                t:'txt'},
+      {k:'headphone',      l:'HeadPhone',            t:'txt'},
+      {k:'usbExtender',    l:'USB Extender',         t:'txt'},
+      {k:'containsPII',    l:'Contains PII',         t:'sel', o:PII, def:'No'},
+    ]
+  },
+  desktops:{
+    title:'Desktops', icon:'🖥️', sub:'Employee Devices',
+    types:['Desktop'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Desktop'], def:'Desktop'},
+      {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
+      {k:'serviceTag',    l:'Service Tag',          t:'txt'},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
+      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
+      {k:'lastOwner',     l:'Last Owner',          t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'assetHealth',   l:'Asset Health',        t:'sel', o:HLTH, def:'Good'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+      {k:'processor',     l:'Processor',           t:'txt'},
+      {k:'os',            l:'O/S',                 t:'txt'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'configuration', l:'Configuration',       t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+    ]
+  },
+  monitors:{
+    title:'Monitors', icon:'🖵', sub:'Employee Devices',
+    types:['Monitor'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Monitor'], def:'Monitor'},
+      {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
+      {k:'serviceTag',    l:'Service Tag',          t:'txt'},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
+      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'assetHealth',   l:'Asset Health',        t:'sel', o:HLTH, def:'Good'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+    ]
+  },
+  accessories:{
+    title:'Accessories', icon:'⌨️', sub:'Employee Devices',
+    types:['Keyboard','Mouse','Headphone','USB Extender','Accessory'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Keyboard','Mouse','Headphone','USB Extender','Accessory']},
+      {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
+      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'linkedDevice',  l:'Linked Device Tag',   t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+    ]
+  },
+  networking:{
+    title:'Networking', icon:'🌐', sub:null,
+    types:['Switch','Router','Firewall','Access Point','Networking'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Switch','Router','Firewall','Access Point','Other']},
+      {k:'deviceId',      l:'Asset Id',            t:'txt'},
+      {k:'macId',         l:'MAC ID',              t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'serialNumber',  l:'S/N',                 t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'os',            l:'O/S',                 t:'txt'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'configuration', l:'Configuration',       t:'area'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  cloud:{
+    title:'Cloud Asset Register', icon:'☁️', sub:null,
+    types:['Cloud'],
+    fields:[
+      {k:'assetName',     l:'Asset',               t:'txt'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Cloud'},
+      {k:'assetValue',    l:'Asset Value',         t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'location',      l:'Asset Location',      t:'sel', o:LOC},
+      {k:'containsPII',   l:'Contains PII Data',   t:'sel', o:PII, def:'No'},
+      {k:'region',        l:'Asset Region',        t:'txt'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  infodesk:{
+    title:'Infodesk Applications', icon:'🖥️', sub:null,
+    types:['Infodesk Application'],
+    fields:[
+      {k:'assetName',     l:'Asset',               t:'txt'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Infodesk Application'},
+      {k:'assetValue',    l:'Asset Value',         t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'location',      l:'Asset Location',      t:'sel', o:LOC},
+      {k:'containsPII',   l:'Contains PII Data',   t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  thirdparty:{
+    title:'Third Party Software', icon:'📦', sub:null,
+    types:['Third Party Software'],
+    fields:[
+      {k:'assetName',     l:'Asset',               t:'txt'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Third Party Software'},
+      {k:'assetValue',    l:'Asset Value',         t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'location',      l:'Asset Location',      t:'sel', o:LOC},
+      {k:'containsPII',   l:'Contains PII Data',   t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+      {k:'cveAlert',      l:'CVE Alert',           t:'txt'},
+      {k:'setup',         l:'Setup',               t:'txt'},
+      {k:'billingApi',    l:'Billing API',         t:'txt'},
+    ]
+  },
+  ups:{
+    title:'UPS', icon:'🔋', sub:'Admin Devices',
+    types:['UPS'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['UPS'], def:'UPS'},
+      {k:'deviceId',      l:'Device Id',           t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  mobiles:{
+    title:'Mobile Phones', icon:'📱', sub:'Admin Devices',
+    types:['Mobile Phone'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Mobile Phone'], def:'Mobile Phone'},
+      {k:'deviceId',      l:'Device Id',           t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  scanners:{
+    title:'Scanners & Printers', icon:'🖨️', sub:'Admin Devices',
+    types:['Scanner','Printer'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Scanner','Printer']},
+      {k:'deviceId',      l:'Device Id',           t:'txt'},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'model',         l:'Model',               t:'txt'},
+      {k:'serviceTag',    l:'Service Tag',         t:'txt'},
+      {k:'partNumber',    l:'P/N',                 t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'description',   l:'Description',         t:'area'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  cameras:{
+    title:'Cameras & DVR', icon:'📷', sub:'Admin Devices',
+    types:['Camera','DVR'],
+    fields:[
+      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Camera','DVR']},
+      {k:'location',      l:'Location',            t:'sel', o:LOC},
+      {k:'invoiceNo',     l:'Invoice No',          t:'txt'},
+      {k:'warranty',      l:'Warranty',            t:'txt'},
+      {k:'installDate',   l:'Install Date',        t:'date'},
+      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
+      {k:'department',    l:'Dept',                t:'txt'},
+      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
+      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
+      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
+    ]
+  },
+  gatepass:{
+    title:'Gate Pass', icon:'🎫', sub:null,
+    types:['GatePass'],
+    fields:[
+      {k:'gatePassNo',          l:'Gate Pass No',         t:'txt', ro:true},
+      {k:'date',                l:'Date',                  t:'date'},
+      {k:'passType',            l:'Pass Type',             t:'sel', o:['Returnable','Non-Returnable'], def:'Returnable'},
+      {k:'issuedTo',            l:'Issued To',             t:'txt'},
+      {k:'person',              l:'Person',                t:'txt'},
+      {k:'deptHead',            l:'Dept Head',             t:'txt'},
+      {k:'securityGuard',       l:'Security Guard',        t:'txt'},
+      {k:'receiverName',        l:'Receiver Name',         t:'txt'},
+      {k:'assetItems',          l:'Asset Items',           t:'area'},
+      {k:'expectedReturnDate',  l:'Expected Return Date',  t:'date'},
+      {k:'actualReturnDate',    l:'Actual Return Date',    t:'date'},
+      {k:'status',              l:'Status',                t:'sel', o:['Open','Returned','Closed'], def:'Open'},
+      {k:'remarks',             l:'Remarks',               t:'area'},
+    ]
+  },
+  leavers:{
+    title:'Infodesk Leavers', icon:'👤', sub:null,
+    types:['Leaver'],
+    fields:[
+      {k:'employeeName',        l:'Employee Name',         t:'txt'},
+      {k:'dateOfLeaving',       l:'Date of Leaving',       t:'date'},
+      {k:'department',          l:'Department',            t:'txt'},
+      {k:'lineManager',         l:'Line Manager',          t:'txt'},
+      {k:'emailGroups',         l:'Email Groups',          t:'sel', o:AR, def:'Active'},
+      {k:'infodeskQaDev',       l:'Infodesk QA/Dev',       t:'sel', o:AR, def:'Active'},
+      {k:'infodeskProd',        l:'Infodesk Prod',         t:'sel', o:AR, def:'Active'},
+      {k:'jiraWiki',            l:'Jira & Wiki',           t:'sel', o:AR, def:'Active'},
+      {k:'msOffice',            l:'MS Office',             t:'sel', o:AR, def:'Active'},
+      {k:'mongoAccess',         l:'Mongo Access',          t:'sel', o:AR, def:'Active'},
+      {k:'azureInfodesk',       l:'Azure Infodesk',        t:'sel', o:AR, def:'Active'},
+      {k:'azureWnInfodesk',     l:'Azure WN Infodesk',     t:'sel', o:AR, def:'Active'},
+      {k:'vpn',                 l:'VPN',                   t:'sel', o:AR, def:'Active'},
+      {k:'wnVpn',               l:'WN VPN',                t:'sel', o:AR, def:'Active'},
+      {k:'azureDevops',         l:'Azure DevOps',          t:'sel', o:AR, def:'Active'},
+      {k:'infoAdmin',           l:'Info Admin',            t:'sel', o:AR, def:'Active'},
+      {k:'zabbix',              l:'Zabbix',                t:'sel', o:AR, def:'Active'},
+      {k:'github',              l:'GitHub',                t:'sel', o:AR, def:'Active'},
+      {k:'infodeskPortal',      l:'Infodesk Portal',       t:'sel', o:AR, def:'Active'},
+      {k:'salesforce',          l:'Salesforce',            t:'sel', o:AR, def:'Active'},
+      {k:'hwInventoryLocation', l:'HW Inventory Location', t:'txt'},
+      {k:'hwHandedOver',        l:'HW Handed Over',        t:'sel', o:['Pending','Yes','No'], def:'Pending'},
+      {k:'itPeerReview',        l:'IT Peer Review',        t:'sel', o:['Pending','Approved','Rejected'], def:'Pending'},
+      {k:'reportingManager',    l:'Reporting Manager',     t:'sel', o:['Pending','Approved','Rejected'], def:'Pending'},
+      {k:'confirmationAudit',   l:'Confirmation Audit',    t:'sel', o:['Pending','Approved','Rejected'], def:'Pending'},
+      {k:'overallStatus',       l:'Overall Status',        t:'sel', o:['In Progress','Complete'], def:'In Progress'},
+    ]
+  }
+};
+
+// ─── State ────────────────────────────────────────────────────────────────────
+let curSec = 'dashboard';
+let records = [];
+let editId  = null;
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+async function api(path, opts={}) {
+  const r = await fetch(API+path, {headers:{'Content-Type':'application/json'},...opts});
+  const j = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.message||'HTTP '+r.status);
+  return j;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Toast
-// ─────────────────────────────────────────────────────────────────────────────
-function toast(msg, type = 'info') {
-  const el = document.createElement('div');
-  el.className = `toast toast-${type}`;
-  el.textContent = msg;
-  document.getElementById('toast-container').appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+// ─── Toast ────────────────────────────────────────────────────────────────────
+function toast(msg,type='info'){
+  const el=document.createElement('div');
+  el.className=`toast t-${type}`;
+  el.textContent=msg;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(()=>el.remove(),3000);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Modal helpers
-// ─────────────────────────────────────────────────────────────────────────────
-function openModal(id)  { document.getElementById(id).classList.add('open'); }
-function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+// ─── Modal helpers ────────────────────────────────────────────────────────────
+function openModal(id){document.getElementById(id).classList.add('show');}
+function closeModal(id){document.getElementById(id).classList.remove('show');}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Navigation
-// ─────────────────────────────────────────────────────────────────────────────
-function showSection(name, typeFilter = '') {
-  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('section-' + name).classList.add('active');
+// Close on backdrop click
+document.querySelectorAll('.overlay').forEach(o=>{
+  o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('show');});
+});
 
-  activeType = typeFilter;
-
-  if (name === 'dashboard') {
-    document.getElementById('nav-dashboard').classList.add('active');
+// ─── Navigation ───────────────────────────────────────────────────────────────
+function goTo(sec){
+  curSec=sec;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('nav-'+sec)?.classList.add('active');
+  if(sec==='dashboard'){
+    document.getElementById('sec-dashboard').style.display='';
+    document.getElementById('sec-table').style.display='none';
     loadDashboard();
-  } else if (name === 'assets') {
-    const navMap = { '': 'nav-assets', 'Laptop': 'nav-laptop', 'Desktop': 'nav-desktop',
-      'Monitor': 'nav-monitor', 'Mobile Phone': 'nav-mobile', 'Switch': 'nav-network',
-      'UPS': 'nav-ups', 'Camera': 'nav-camera' };
-    const navId = navMap[typeFilter] || 'nav-assets';
-    document.getElementById(navId)?.classList.add('active');
+  } else {
+    document.getElementById('sec-dashboard').style.display='none';
+    document.getElementById('sec-table').style.display='';
+    const s=SECS[sec];
+    document.getElementById('tbl-title').textContent=s.icon+' '+s.title;
+    document.getElementById('tbl-sub').textContent=s.sub?s.sub+' › '+s.title:s.title;
+    document.getElementById('tbl-search').value='';
+    loadSection();
+  }
+}
 
-    const titleMap = { '': 'All Assets', 'Laptop': 'Laptops', 'Desktop': 'Desktops',
-      'Monitor': 'Monitors', 'Mobile Phone': 'Mobile Phones', 'Switch': 'Networking',
-      'Router': 'Routers', 'UPS': 'UPS Devices', 'Camera': 'Cameras', 'DVR': 'DVR Devices' };
-    document.getElementById('assets-title').textContent = titleMap[typeFilter] || 'All Assets';
+// ─── Dashboard ────────────────────────────────────────────────────────────────
+async function loadDashboard(){
+  try {
+    const {data} = await api('/assets');
+    const all = data||[];
+    // Stats
+    const counts={};
+    all.forEach(a=>{ counts[a.assetType]=(counts[a.assetType]||0)+1; });
+    const statKeys=[
+      {l:'Total',k:null},
+      {l:'Laptops',k:'Laptop'},{l:'Desktops',k:'Desktop'},{l:'Monitors',k:'Monitor'},
+      {l:'Networking',k:null,types:['Switch','Router','Firewall','Access Point','Networking']},
+      {l:'Cloud',k:'Cloud'},{l:'UPS',k:'UPS'},{l:'Mobile Phones',k:'Mobile Phone'},
+      {l:'Gate Passes',k:'GatePass'},{l:'Leavers',k:'Leaver'},
+    ];
+    document.getElementById('dash-stats').innerHTML = statKeys.map(s=>{
+      let v;
+      if(!s.k&&!s.types) v=all.length;
+      else if(s.types) v=all.filter(a=>s.types.includes(a.assetType)).length;
+      else v=counts[s.k]||0;
+      return `<div class="stat"><div class="lbl">${s.l}</div><div class="val">${v}</div></div>`;
+    }).join('');
+    // Recent 20
+    const recent=all.slice(0,20);
+    document.getElementById('dash-recent').innerHTML=renderRows(recent,null,true);
+  } catch(e){
+    document.getElementById('dash-stats').innerHTML='<p style="color:var(--red)">'+e.message+'</p>';
+  }
+}
 
-    if (typeFilter) {
-      document.getElementById('filter-type').value = typeFilter;
+// ─── Load section data ────────────────────────────────────────────────────────
+async function loadSection(){
+  document.getElementById('tbl-wrap').innerHTML='<div class="loading"><span class="spin"></span>Loading…</div>';
+  try {
+    const s=SECS[curSec];
+    // For single-type sections use the GSI filter, for multi-type fetch all + filter client-side
+    let all;
+    if(s.types.length===1){
+      const {data}=await api('/assets?assetType='+encodeURIComponent(s.types[0]));
+      all=data||[];
+    } else {
+      const {data}=await api('/assets');
+      all=(data||[]).filter(a=>s.types.includes(a.assetType));
     }
-    loadAssets();
+    records=all;
+    renderTable();
+  } catch(e){
+    document.getElementById('tbl-wrap').innerHTML=`<div class="empty"><p>Error: ${e.message}</p></div>`;
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Status badge
-// ─────────────────────────────────────────────────────────────────────────────
-function statusBadge(s) {
-  const map = { 'Active': 'badge-active', 'In Repair': 'badge-repair',
-    'Retired': 'badge-retired', 'Lost': 'badge-lost', 'In Store': 'badge-store' };
-  return `<span class="badge ${map[s] || ''}">${s}</span>`;
+// ─── Render table ─────────────────────────────────────────────────────────────
+function renderTable(){
+  const q=document.getElementById('tbl-search').value.toLowerCase();
+  const list=q?records.filter(r=>JSON.stringify(r).toLowerCase().includes(q)):records;
+  document.getElementById('tbl-count').textContent=list.length+' record'+(list.length!==1?'s':'');
+  document.getElementById('tbl-wrap').innerHTML=renderRows(list,curSec,false);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Dashboard
-// ─────────────────────────────────────────────────────────────────────────────
-async function loadDashboard() {
-  try {
-    const { data } = await apiFetch('/assets');
-    allAssets = data || [];
+function renderRows(rows, sec, compact){
+  if(!rows.length) return '<div class="empty"><p>No records found</p></div>';
+  const fields = sec ? SECS[sec].fields : null;
+  const headers = fields
+    ? fields.map(f=>`<th>${esc(f.l)}</th>`).join('')+'<th>Actions</th>'
+    : '<th>Type</th><th>Key Field</th><th>Status</th><th>Location</th>';
 
-    const counts = { total: allAssets.length, active: 0, repair: 0, retired: 0,
-      laptop: 0, desktop: 0, monitor: 0, mobile: 0 };
-    allAssets.forEach(a => {
-      if (a.status === 'Active')    counts.active++;
-      if (a.status === 'In Repair') counts.repair++;
-      if (a.status === 'Retired')   counts.retired++;
-      if (a.assetType === 'Laptop')       counts.laptop++;
-      if (a.assetType === 'Desktop')      counts.desktop++;
-      if (a.assetType === 'Monitor')      counts.monitor++;
-      if (a.assetType === 'Mobile Phone') counts.mobile++;
-    });
-    Object.entries(counts).forEach(([k, v]) => {
-      const el = document.getElementById('stat-' + k);
-      if (el) el.textContent = v;
-    });
-
-    // Recent 10
-    const recent = [...allAssets].slice(0, 10);
-    renderTable('recent-table-wrap', recent, true);
-  } catch (e) {
-    document.getElementById('recent-table-wrap').innerHTML = `<div class="empty"><p>Failed to load: ${e.message}</p></div>`;
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Assets table
-// ─────────────────────────────────────────────────────────────────────────────
-async function loadAssets() {
-  document.getElementById('assets-table-wrap').innerHTML = '<div class="loading"><span class="spinner"></span>Loading…</div>';
-  try {
-    const params = new URLSearchParams();
-    const type = document.getElementById('filter-type').value || activeType;
-    const loc  = document.getElementById('filter-location').value;
-    const stat = document.getElementById('filter-status').value;
-    if (type) params.set('assetType', type);
-    if (loc)  params.set('location', loc);
-    if (stat) params.set('status', stat);
-    const qs = params.toString();
-    const { data } = await apiFetch('/assets' + (qs ? '?' + qs : ''));
-    allAssets = data || [];
-    filterAndRender();
-  } catch (e) {
-    document.getElementById('assets-table-wrap').innerHTML = `<div class="empty"><p>Failed: ${e.message}</p></div>`;
-  }
-}
-
-function applyFilters() {
-  const type = document.getElementById('filter-type').value;
-  const loc  = document.getElementById('filter-location').value;
-  const stat = document.getElementById('filter-status').value;
-  // If server-side filters changed, reload
-  if (type !== activeType || loc || stat) {
-    loadAssets(); return;
-  }
-  filterAndRender();
-}
-
-function filterAndRender() {
-  const search = document.getElementById('filter-search').value.toLowerCase();
-  let list = allAssets;
-  if (search) {
-    list = list.filter(a =>
-      [a.assetName, a.assetType, a.manufacturer, a.model, a.serialNumber,
-       a.assignedTo, a.department, a.location].some(v => v?.toLowerCase().includes(search))
-    );
-  }
-  document.getElementById('asset-count').textContent = `${list.length} record${list.length !== 1 ? 's' : ''}`;
-  renderTable('assets-table-wrap', list, false);
-}
-
-function renderTable(wrapperId, assets, compact) {
-  const wrap = document.getElementById(wrapperId);
-  if (!assets.length) {
-    wrap.innerHTML = `<div class="empty">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 9H5v-2h6v2zm8 0h-6v-2h6v2z"/></svg>
-      <p>No assets found</p></div>`;
-    return;
-  }
-  const rows = assets.map(a => `
-    <tr>
-      <td><strong>${esc(a.assetName)}</strong></td>
-      <td>${esc(a.assetType)}</td>
-      ${compact ? '' : `<td>${esc(a.manufacturer||'—')}</td><td>${esc(a.model||'—')}</td><td>${esc(a.serialNumber||'—')}</td>`}
-      <td>${esc(a.location)}</td>
-      <td>${esc(a.assignedTo||'—')}</td>
-      ${compact ? '' : `<td>${esc(a.department||'—')}</td>`}
-      <td>${statusBadge(a.status)}</td>
-      <td>${compact ? '' : `<div class="td-actions">
-        <button class="btn btn-outline btn-sm" onclick='openEditModal(${JSON.stringify(a)})'>Edit</button>
-        <button class="btn btn-danger btn-sm" onclick="confirmDelete('${a.assetId}')">Del</button>
-      </div>`}</td>
-    </tr>`).join('');
-
-  wrap.innerHTML = `<table>
-    <thead><tr>
-      <th>Name</th><th>Type</th>
-      ${compact ? '' : '<th>Manufacturer</th><th>Model</th><th>Serial</th>'}
-      <th>Location</th><th>Assigned To</th>
-      ${compact ? '' : '<th>Department</th>'}
-      <th>Status</th><th>${compact ? '' : 'Actions'}</th>
-    </tr></thead>
-    <tbody>${rows}</tbody>
-  </table>`;
-}
-
-function esc(s) {
-  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Add / Edit
-// ─────────────────────────────────────────────────────────────────────────────
-function openAddModal() {
-  editingId = null;
-  document.getElementById('modal-title').textContent = 'Add Asset';
-  document.getElementById('save-btn').textContent = 'Save Asset';
-  ['f-name','f-mfr','f-model','f-serial','f-assigned','f-dept','f-notes'].forEach(id => document.getElementById(id).value = '');
-  ['f-type','f-location'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('f-status').value = 'Active';
-  document.getElementById('f-purchase').value = '';
-  document.getElementById('f-warranty').value = '';
-  openModal('modal-asset');
-}
-
-function openEditModal(asset) {
-  editingId = asset.assetId;
-  document.getElementById('modal-title').textContent = 'Edit Asset';
-  document.getElementById('save-btn').textContent = 'Update Asset';
-  document.getElementById('f-name').value     = asset.assetName || '';
-  document.getElementById('f-type').value     = asset.assetType || '';
-  document.getElementById('f-mfr').value      = asset.manufacturer || '';
-  document.getElementById('f-model').value    = asset.model || '';
-  document.getElementById('f-serial').value   = asset.serialNumber || '';
-  document.getElementById('f-location').value = asset.location || '';
-  document.getElementById('f-assigned').value = asset.assignedTo || '';
-  document.getElementById('f-dept').value     = asset.department || '';
-  document.getElementById('f-status').value   = asset.status || 'Active';
-  document.getElementById('f-purchase').value = asset.purchaseDate || '';
-  document.getElementById('f-warranty').value = asset.warrantyExpiry || '';
-  document.getElementById('f-notes').value    = asset.notes || '';
-  openModal('modal-asset');
-}
-
-async function saveAsset() {
-  const name     = document.getElementById('f-name').value.trim();
-  const type     = document.getElementById('f-type').value;
-  const location = document.getElementById('f-location').value;
-
-  if (!name)     { toast('Asset name is required', 'error'); return; }
-  if (!type)     { toast('Asset type is required', 'error'); return; }
-  if (!location) { toast('Location is required', 'error'); return; }
-
-  const body = {
-    assetName:     name,
-    assetType:     type,
-    manufacturer:  document.getElementById('f-mfr').value.trim() || undefined,
-    model:         document.getElementById('f-model').value.trim() || undefined,
-    serialNumber:  document.getElementById('f-serial').value.trim() || undefined,
-    location,
-    assignedTo:    document.getElementById('f-assigned').value.trim() || undefined,
-    department:    document.getElementById('f-dept').value.trim() || undefined,
-    status:        document.getElementById('f-status').value,
-    purchaseDate:  document.getElementById('f-purchase').value || undefined,
-    warrantyExpiry:document.getElementById('f-warranty').value || undefined,
-    notes:         document.getElementById('f-notes').value.trim() || undefined,
+  const makeRow = r => {
+    if(!fields){
+      // Dashboard compact row
+      const key = r.assetName||r.employeeName||r.gatePassNo||r.deviceId||r.serviceTag||r.assetId.slice(0,8);
+      return `<tr><td>${esc(r.assetType)}</td><td>${esc(key)}</td><td>${badge(r.status||r.overallStatus||'')}</td><td>${esc(r.location||'')}</td></tr>`;
+    }
+    const cells = fields.map(f=>`<td title="${esc(String(r[f.k]||''))}">${badgeOrText(f,r[f.k])}</td>`).join('');
+    const actions = compact?'':`<td><div class="td-actions">
+      <button class="btn btn-outline btn-xs" onclick='openEdit(${JSON.stringify(r)})'>Edit</button>
+      <button class="btn btn-danger btn-xs" onclick="doDelete('${r.assetId}')">Del</button>
+    </div></td>`;
+    return `<tr>${cells}${actions}</tr>`;
   };
 
-  const btn = document.getElementById('save-btn');
-  btn.disabled = true; btn.textContent = 'Saving…';
+  return `<table><thead><tr>${headers}</tr></thead><tbody>${rows.map(makeRow).join('')}</tbody></table>`;
+}
 
+function badgeOrText(f,v){
+  if(v===undefined||v===null||v==='') return '<span style="color:var(--muted)">—</span>';
+  const s=String(v);
+  const badgeMap={
+    'Active':'b-active','Inactive':'b-inactive','In Repair':'b-repair',
+    'Retired':'b-retired','Lost':'b-inactive','In Store':'b-store',
+    'Revoked':'b-revoked','Good':'b-good','Fair':'b-fair','Poor':'b-poor',
+    'Open':'b-open','Returned':'b-returned','Closed':'b-closed',
+    'Yes':'b-yes','No':'b-no','Pending':'b-pending',
+    'In Progress':'b-progress','Complete':'b-complete','Approved':'b-returned',
+  };
+  if(badgeMap[s]) return `<span class="badge ${badgeMap[s]}">${esc(s)}</span>`;
+  return esc(s);
+}
+
+function badge(v){return badgeOrText({},v);}
+
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ─── Add / Edit ───────────────────────────────────────────────────────────────
+function openAdd(){
+  if(curSec==='dashboard') return toast('Select a section first','info');
+  editId=null;
+  document.getElementById('form-title').textContent='Add — '+SECS[curSec].title;
+  document.getElementById('form-save').textContent='Save';
+  buildForm(null);
+  openModal('modal-form');
+}
+
+function openEdit(rec){
+  editId=rec.assetId;
+  document.getElementById('form-title').textContent='Edit — '+SECS[curSec].title;
+  document.getElementById('form-save').textContent='Update';
+  buildForm(rec);
+  openModal('modal-form');
+}
+
+function buildForm(rec){
+  const s=SECS[curSec];
+  const today=new Date().toISOString().slice(0,10);
+
+  // Auto gate pass number for new records
+  let gpNo='';
+  if(curSec==='gatepass'&&!rec){
+    const d=today.replace(/-/g,'');
+    const existing=records.filter(r=>(r.gatePassNo||'').startsWith('GP-'+d+'-'));
+    const max=existing.reduce((m,r)=>{const n=parseInt((r.gatePassNo||'').split('-').pop()||'0');return n>m?n:m;},0);
+    gpNo=`GP-${d}-${String(max+1).padStart(3,'0')}`;
+  }
+
+  document.getElementById('form-fields').innerHTML = s.fields.map(f=>{
+    const val = rec ? (rec[f.k]??'') : (f.k==='gatePassNo'?gpNo:(f.def??''));
+    const wide = f.t==='area' || ['configuration','assetItems','remarks','description'].includes(f.k);
+    return `<div class="fg${wide?' full':''}">
+      <label>${esc(f.l)}</label>
+      ${buildInput(f,val)}
+    </div>`;
+  }).join('');
+}
+
+function buildInput(f,val){
+  const v=esc(String(val??''));
+  const ro=f.ro?'readonly':'';
+  if(f.t==='sel'){
+    const opts=(f.o||[]).map(o=>`<option${val===o?' selected':''}>${esc(o)}</option>`).join('');
+    return `<select class="fc" data-key="${f.k}" ${ro}>${opts}</select>`;
+  }
+  if(f.t==='area'){
+    return `<textarea class="fc" data-key="${f.k}" rows="3" ${ro}>${v}</textarea>`;
+  }
+  const type=f.t==='date'?'date':'text';
+  return `<input class="fc" type="${type}" data-key="${f.k}" value="${v}" ${ro}>`;
+}
+
+async function saveRecord(){
+  const s=SECS[curSec];
+  const body={assetType: s.types[0]};
+  document.querySelectorAll('#form-fields [data-key]').forEach(el=>{
+    const v=el.value.trim();
+    if(v) body[el.dataset.key]=v;
+  });
+  // For types with a select for assetType, override
+  const atEl=document.querySelector('#form-fields [data-key="assetType"]');
+  if(atEl) body.assetType=atEl.value;
+
+  if(!body.assetType){toast('Asset Type is required','err');return;}
+
+  const btn=document.getElementById('form-save');
+  btn.disabled=true; btn.textContent='Saving…';
   try {
-    if (editingId) {
-      await apiFetch('/assets/' + editingId, { method: 'PUT', body: JSON.stringify(body) });
-      toast('Asset updated successfully', 'success');
+    if(editId){
+      await api('/assets/'+editId,{method:'PUT',body:JSON.stringify(body)});
+      toast('Updated successfully','ok');
     } else {
-      await apiFetch('/assets', { method: 'POST', body: JSON.stringify(body) });
-      toast('Asset created successfully', 'success');
+      await api('/assets',{method:'POST',body:JSON.stringify(body)});
+      toast('Created successfully','ok');
     }
-    closeModal('modal-asset');
-    if (document.getElementById('section-assets').classList.contains('active')) loadAssets();
-    else loadDashboard();
-  } catch (e) {
-    toast('Error: ' + e.message, 'error');
+    closeModal('modal-form');
+    loadSection();
+  } catch(e){
+    toast('Error: '+e.message,'err');
   } finally {
-    btn.disabled = false; btn.textContent = editingId ? 'Update Asset' : 'Save Asset';
+    btn.disabled=false; btn.textContent=editId?'Update':'Save';
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Delete
-// ─────────────────────────────────────────────────────────────────────────────
-function confirmDelete(assetId) {
-  const btn = document.getElementById('confirm-delete-btn');
-  btn.onclick = async () => {
-    btn.disabled = true; btn.textContent = 'Deleting…';
+// ─── Delete ───────────────────────────────────────────────────────────────────
+function doDelete(id){
+  const btn=document.getElementById('confirm-btn');
+  btn.onclick=async()=>{
+    btn.disabled=true; btn.textContent='Deleting…';
     try {
-      await apiFetch('/assets/' + assetId, { method: 'DELETE' });
-      toast('Asset deleted', 'success');
+      await api('/assets/'+id,{method:'DELETE'});
+      toast('Deleted','ok');
       closeModal('modal-confirm');
-      if (document.getElementById('section-assets').classList.contains('active')) loadAssets();
-      else loadDashboard();
-    } catch (e) {
-      toast('Error: ' + e.message, 'error');
+      loadSection();
+    } catch(e){
+      toast('Error: '+e.message,'err');
     } finally {
-      btn.disabled = false; btn.textContent = 'Delete';
+      btn.disabled=false; btn.textContent='Delete';
     }
   };
   openModal('modal-confirm');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Export Excel
-// ─────────────────────────────────────────────────────────────────────────────
-async function exportExcel() {
-  const btn = event.target.closest('button');
-  btn.disabled = true; btn.textContent = 'Generating…';
+// ─── Export ───────────────────────────────────────────────────────────────────
+async function doExport(){
+  const btn=event.target.closest('button');
+  btn.disabled=true; btn.textContent='Generating…';
   try {
-    const res = await apiFetch('/assets/export');
-    const url = res.data?.url;
-    if (!url) throw new Error('No URL returned');
-    window.open(url, '_blank');
-    toast('Excel file ready — downloading…', 'success');
-  } catch (e) {
-    toast('Export failed: ' + e.message, 'error');
+    const {data}=await api('/assets/export');
+    if(data?.url) window.open(data.url,'_blank');
+    toast('Excel ready — downloading','ok');
+  } catch(e){
+    toast('Export failed: '+e.message,'err');
   } finally {
-    btn.disabled = false;
-    btn.innerHTML = `<svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/></svg> Export All`;
+    btn.disabled=false; btn.textContent='↓ Export All';
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Close modal on backdrop click
-// ─────────────────────────────────────────────────────────────────────────────
-document.querySelectorAll('.modal-backdrop').forEach(bd => {
-  bd.addEventListener('click', e => { if (e.target === bd) bd.classList.remove('open'); });
-});
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Boot
-// ─────────────────────────────────────────────────────────────────────────────
+// ─── Boot ─────────────────────────────────────────────────────────────────────
 loadDashboard();
 </script>
 </body>

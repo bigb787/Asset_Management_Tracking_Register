@@ -115,11 +115,10 @@ export async function handler(
 
       const input = body as CreateAssetInput;
       if (!input.assetType) return badRequest('assetType is required');
-      if (!input.assetName) return badRequest('assetName is required');
-      if (!input.location) return badRequest('location is required');
 
+      // location validation — only if a location value is provided
       const validLocations = ['India', 'US', 'UK', 'Sweden'];
-      if (!validLocations.includes(input.location)) {
+      if (input.location && !validLocations.includes(input.location)) {
         return badRequest(`location must be one of: ${validLocations.join(', ')}`);
       }
 
@@ -144,11 +143,9 @@ export async function handler(
         if (!body) return badRequest('Invalid JSON body');
 
         const updates = body as UpdateAssetInput;
-        if (updates.location) {
-          const validLocations = ['India', 'US', 'UK', 'Sweden'];
-          if (!validLocations.includes(updates.location)) {
-            return badRequest(`location must be one of: ${validLocations.join(', ')}`);
-          }
+        const validLocations = ['India', 'US', 'UK', 'Sweden'];
+        if (updates.location && !validLocations.includes(updates.location)) {
+          return badRequest(`location must be one of: ${validLocations.join(', ')}`);
         }
 
         const asset = await updateAsset(assetId, updates);
