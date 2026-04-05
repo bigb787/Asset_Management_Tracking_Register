@@ -136,7 +136,7 @@ textarea.fc{resize:vertical;min-height:60px;}
     <span class="iso-badge">ISO 27001 ✓</span>
   </div>
   <div style="display:flex;gap:8px;">
-    <button class="btn btn-success" id="topExportBtn" onclick="doExport(this)" title="IT &amp; physical assets only — excludes Gate Pass and Infodesk Leavers">↓ Export asset register</button>
+    <button class="btn btn-success" id="topExportBtn" onclick="doExport(this)" title="Multi-tab asset register, or all gate passes / leavers when on those pages">↓ Export asset register</button>
   </div>
 </header>
 
@@ -606,6 +606,22 @@ function goTo(sec){
     }
     loadSection();
   }
+  updateTopExportButton();
+}
+
+function updateTopExportButton(){
+  const b=document.getElementById('topExportBtn');
+  if(!b) return;
+  if(curSec==='gatepass'){
+    b.textContent='↓ Export all gate passes';
+    b.title='Downloads one Excel file with every gate pass record';
+  } else if(curSec==='leavers'){
+    b.textContent='↓ Export all leavers';
+    b.title='Downloads one Excel file with every Infodesk Leaver record';
+  } else {
+    b.textContent='↓ Export asset register';
+    b.title='One workbook: Laptops, Desktops, Monitors, etc. each on its own sheet (no Gate Pass or Leavers — open those pages and use this button there)';
+  }
 }
 
 // ─── Dashboard ────────────────────────────────────────────────────────────────
@@ -855,15 +871,25 @@ function sectionExportQuery(){
 
 async function doExport(btn){
   const el=(btn&&btn.closest)?btn.closest('button'):document.getElementById('topExportBtn');
-  el.disabled=true; const prev=el.textContent; el.textContent='Generating…';
+  el.disabled=true; el.textContent='Generating…';
+  let path='/assets/export';
+  let doneMsg='Workbook ready — one sheet per asset table';
+  if(curSec==='gatepass'){
+    path='/assets/export?assetType='+encodeURIComponent('GatePass');
+    doneMsg='Gate pass export ready';
+  } else if(curSec==='leavers'){
+    path='/assets/export?assetType='+encodeURIComponent('Leaver');
+    doneMsg='Infodesk Leavers export ready';
+  }
   try {
-    const {data}=await api('/assets/export');
+    const {data}=await api(path);
     if(data?.url) window.open(data.url,'_blank');
-    toast('Asset register ready — use Gate Pass / Leavers for those lists','ok');
+    toast(doneMsg,'ok');
   } catch(e){
     toast('Export failed: '+e.message,'err');
   } finally {
-    el.disabled=false; el.textContent=prev||'↓ Export asset register';
+    el.disabled=false;
+    updateTopExportButton();
   }
 }
 
@@ -1018,6 +1044,7 @@ function handleImportFile(ev){
 }
 
 // ─── Boot ─────────────────────────────────────────────────────────────────────
+updateTopExportButton();
 loadDashboard();
 </script>
 </body>

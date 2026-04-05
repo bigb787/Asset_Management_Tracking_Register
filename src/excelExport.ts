@@ -299,80 +299,53 @@ function buildSummarySheet(
 }
 
 // ---------------------------------------------------------------------------
-// Main export function
+// Dynamic-column sheet (shared by section export & multi-tab register)
 // ---------------------------------------------------------------------------
-export async function generateAndUploadExcel(
-  assets: Asset[],
-  options?: { scopeNote?: string },
-): Promise<ExportResult> {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Asset Manager';
-  wb.created = new Date();
+const KEY_SORT_PRI = [
+  'assetId',
+  'assetType',
+  'assetName',
+  'gatePassNo',
+  'employeeName',
+];
 
-  buildAllAssetsSheet(wb, assets);
-  buildByTypeSheet(wb, assets);
-  buildByLocationSheet(wb, assets);
-  buildSummarySheet(wb, assets, options?.scopeNote);
-
-  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const fileName = `asset-register-export-${timestamp}.xlsx`;
-  const s3Key = `exports/${fileName}`;
-
-  await s3.send(
-    new PutObjectCommand({
-      Bucket: BUCKET,
-      Key: s3Key,
-      Body: buffer,
-      ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      ServerSideEncryption: 'AES256',
-      ContentDisposition: `attachment; filename="${fileName}"`,
-    }),
-  );
-
-  const expiresIn = 3600; // 1 hour
-  const url = await getSignedUrl(
-    s3,
-    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
-    { expiresIn },
-  );
-
-  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
-  return { url, fileName, expiresAt };
-}
-
-// ---------------------------------------------------------------------------
-// Single-sheet export (one section / filtered asset type(s))
-// ---------------------------------------------------------------------------
-export async function generateSectionExcel(
-  assets: Record<string, unknown>[],
-  sectionLabel: string,
-): Promise<ExportResult> {
-  const wb = new ExcelJS.Workbook();
-  wb.creator = 'Asset Manager';
-  wb.created = new Date();
-
-  const safeSheet = sectionLabel.replace(/[[\]\\*?:/]/g, '-').slice(0, 31) || 'Export';
-  const ws = wb.addWorksheet(safeSheet);
-
-  const keySet = new Set<string>();
-  assets.forEach((a) => Object.keys(a).forEach((k) => keySet.add(k)));
-  const keys = Array.from(keySet).sort((a, b) => {
-    const pri = [
-      'assetId',
-      'assetType',
-      'assetName',
-      'gatePassNo',
-      'employeeName',
-    ];
-    const ia = pri.indexOf(a);
-    const ib = pri.indexOf(b);
+function sortDynamicKeys(keys: string[]): string[] {
+  return keys.sort((a, b) => {
+    const ia = KEY_SORT_PRI.indexOf(a);
+    const ib = KEY_SORT_PRI.indexOf(b);
     if (ia >= 0 && ib >= 0) return ia - ib;
     if (ia >= 0) return -1;
     if (ib >= 0) return 1;
     return a.localeCompare(b);
   });
+}
+
+/** Adds one worksheet; returns the final sheet name (may differ if duplicate). */
+function addDynamicAssetSheet(
+  wb: ExcelJS.Workbook,
+  desiredSheetName: string,
+  assets: Record<string, unknown>[],
+): string {
+  const base =
+    desiredSheetName
+      .replace(/[\[\]\\*?:/]/g, '-')
+      .replace(/'/g, '')
+      .trim()
+      .slice(0, 31) || 'Sheet';
+  let name = base;
+  let n = 1;
+  while (wb.getWorksheet(name)) {
+    const suffix = `_${n++}`;
+    name = (base.slice(0, Math.max(1, 31 - suffix.length)) + suffix).slice(
+      0,
+      31,
+    );
+  }
+  const ws = wb.addWorksheet(name);
+
+  const keySet = new Set<string>();
+  assets.forEach((a) => Object.keys(a).forEach((k) => keySet.add(k)));
+  const keys = sortDynamicKeys(Array.from(keySet));
   if (keys.length === 0) {
     keys.push('assetId', 'assetType');
   }
@@ -391,6 +364,135 @@ export async function generateSectionExcel(
     applyDataRow(row, i % 2 === 1);
   });
   ws.views = [{ state: 'frozen', ySplit: 1 }];
+  return name;
+}
+
+/** Matches app sections (GatePass & Leaver excluded before calling). */
+const ASSET_REGISTER_MULTI_TABS: { sheetName: string; types: string[] }[] = [
+  { sheetName: 'Laptops', types: ['Laptop'] },
+  { sheetName: 'Desktops', types: ['Desktop'] },
+  { sheetName: 'Monitors', types: ['Monitor'] },
+  {
+    sheetName: 'Accessories',
+    types: ['Keyboard', 'Mouse', 'Headphone', 'USB Extender', 'Accessory'],
+  },
+  {
+    sheetName: 'Networking',
+    types: ['Switch', 'Router', 'Firewall', 'Access Point', 'Networking'],
+  },
+  { sheetName: 'Cloud', types: ['Cloud'] },
+  { sheetName: 'Infodesk Apps', types: ['Infodesk Application'] },
+  { sheetName: 'Third Party SW', types: ['Third Party Software'] },
+  { sheetName: 'UPS', types: ['UPS'] },
+  { sheetName: 'Mobile Phones', types: ['Mobile Phone'] },
+  { sheetName: 'Scanners Printers', types: ['Scanner', 'Printer'] },
+  { sheetName: 'Admin', types: ['Camera', 'DVR'] },
+];
+
+// ---------------------------------------------------------------------------
+// Main asset register: one workbook, one tab per table (no GatePass / Leaver)
+// ---------------------------------------------------------------------------
+export async function generateMultiTabAssetRegister(
+  assets: Asset[],
+): Promise<ExportResult> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Asset Manager';
+  wb.created = new Date();
+
+  for (const tab of ASSET_REGISTER_MULTI_TABS) {
+    const subset = assets.filter((a) =>
+      tab.types.includes(String(a.assetType)),
+    ) as unknown as Record<string, unknown>[];
+    addDynamicAssetSheet(wb, tab.sheetName, subset);
+  }
+
+  const covered = new Set(ASSET_REGISTER_MULTI_TABS.flatMap((t) => t.types));
+  const other = assets.filter(
+    (a) => !covered.has(String(a.assetType)),
+  ) as unknown as Record<string, unknown>[];
+  if (other.length > 0) {
+    addDynamicAssetSheet(wb, 'Other', other);
+  }
+
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `asset-register-by-table-${timestamp}.xlsx`;
+  const s3Key = `exports/${fileName}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ServerSideEncryption: 'AES256',
+      ContentDisposition: `attachment; filename="${fileName}"`,
+    }),
+  );
+
+  const expiresIn = 3600;
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
+    { expiresIn },
+  );
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  return { url, fileName, expiresAt };
+}
+
+// ---------------------------------------------------------------------------
+// Legacy multi-sheet report (optional — kept for tooling)
+// ---------------------------------------------------------------------------
+export async function generateAndUploadExcel(
+  assets: Asset[],
+  options?: { scopeNote?: string },
+): Promise<ExportResult> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Asset Manager';
+  wb.created = new Date();
+
+  buildAllAssetsSheet(wb, assets);
+  buildByTypeSheet(wb, assets);
+  buildByLocationSheet(wb, assets);
+  buildSummarySheet(wb, assets, options?.scopeNote);
+
+  const buffer = Buffer.from(await wb.xlsx.writeBuffer());
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `asset-register-export-${timestamp}.xlsx`;
+  const s3Key = `exports/${fileName}`;
+
+  await s3.send(
+    new PutObjectCommand({
+      Bucket: BUCKET,
+      Key: s3Key,
+      Body: buffer,
+      ContentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      ServerSideEncryption: 'AES256',
+      ContentDisposition: `attachment; filename="${fileName}"`,
+    }),
+  );
+
+  const expiresIn = 3600;
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: s3Key }),
+    { expiresIn },
+  );
+  const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+  return { url, fileName, expiresAt };
+}
+
+// ---------------------------------------------------------------------------
+// Single-sheet export (one section / filtered asset type(s))
+// ---------------------------------------------------------------------------
+export async function generateSectionExcel(
+  assets: Record<string, unknown>[],
+  sectionLabel: string,
+): Promise<ExportResult> {
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Asset Manager';
+  wb.created = new Date();
+  addDynamicAssetSheet(wb, sectionLabel, assets);
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');

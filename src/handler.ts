@@ -10,7 +10,7 @@ import {
   updateAsset,
   deleteAsset,
 } from './dynamodb';
-import { generateAndUploadExcel, generateSectionExcel } from './excelExport';
+import { generateMultiTabAssetRegister, generateSectionExcel } from './excelExport';
 import { CreateAssetInput, UpdateAssetInput, ApiResponse } from './types';
 
 // ---------------------------------------------------------------------------
@@ -127,10 +127,7 @@ export async function handler(
               subset as unknown as Record<string, unknown>[],
               label,
             )
-          : await generateAndUploadExcel(subset, {
-              scopeNote:
-                'Scope: IT and physical assets only. Gate Pass and Infodesk Leaver records are excluded — export those from Operations → Gate Pass / Infodesk Leavers.',
-            });
+          : await generateMultiTabAssetRegister(subset);
       return ok(result);
     }
 
