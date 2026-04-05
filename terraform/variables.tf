@@ -52,13 +52,13 @@ variable "github_repo" {
 variable "lambda_memory_mb" {
   description = "Lambda memory allocation in MB"
   type        = number
-  default     = 256
+  default     = 512
 }
 
 variable "lambda_timeout_sec" {
   description = "Lambda execution timeout in seconds"
   type        = number
-  default     = 30
+  default     = 120
 }
 
 variable "lambda_runtime" {

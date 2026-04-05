@@ -16,13 +16,17 @@ import { CreateAssetInput, UpdateAssetInput, ApiResponse } from './types';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
+const JSON_HEADERS = {
+  'Content-Type': 'application/json',
+  'Cache-Control': 'no-store',
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+} as const;
+
 function json<T>(status: number, body: ApiResponse<T>): APIGatewayProxyResultV2 {
   return {
     statusCode: status,
-    headers: {
-      'Content-Type': 'application/json',
-      'Cache-Control': 'no-store',
-    },
+    headers: { ...JSON_HEADERS },
     body: JSON.stringify(body),
   };
 }
@@ -84,6 +88,7 @@ export async function handler(
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type,Authorization',
+        'Access-Control-Max-Age': '86400',
       },
       body: '',
     };
@@ -109,6 +114,12 @@ export async function handler(
       } else if (single) {
         subset = assets.filter((a) => a.assetType === single);
         label = single;
+      } else {
+        // Main asset register export — Gate Pass & Leavers use their own section exports
+        subset = assets.filter((a) => {
+          const t = String(a.assetType);
+          return t !== 'GatePass' && t !== 'Leaver';
+        });
       }
       const result =
         single || multi
@@ -116,7 +127,10 @@ export async function handler(
               subset as unknown as Record<string, unknown>[],
               label,
             )
-          : await generateAndUploadExcel(assets);
+          : await generateAndUploadExcel(subset, {
+              scopeNote:
+                'Scope: IT and physical assets only. Gate Pass and Infodesk Leaver records are excluded — export those from Operations → Gate Pass / Infodesk Leavers.',
+            });
       return ok(result);
     }
 

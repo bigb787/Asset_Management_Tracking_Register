@@ -59,7 +59,7 @@ function applyDataRow(row: ExcelJS.Row, isAlt: boolean) {
 // Tab 1 — All Assets
 // ---------------------------------------------------------------------------
 function buildAllAssetsSheet(wb: ExcelJS.Workbook, assets: Asset[]) {
-  const ws = wb.addWorksheet('All Assets');
+  const ws = wb.addWorksheet('Asset register');
 
   ws.columns = [
     { header: '#',             key: 'idx',          width: 5  },
@@ -213,7 +213,11 @@ function buildByLocationSheet(wb: ExcelJS.Workbook, assets: Asset[]) {
 // ---------------------------------------------------------------------------
 // Tab 4 — Summary
 // ---------------------------------------------------------------------------
-function buildSummarySheet(wb: ExcelJS.Workbook, assets: Asset[]) {
+function buildSummarySheet(
+  wb: ExcelJS.Workbook,
+  assets: Asset[],
+  scopeNote?: string,
+) {
   const ws = wb.addWorksheet('Summary');
 
   const byType = assets.reduce<Record<string, number>>((acc, a) => {
@@ -234,7 +238,7 @@ function buildSummarySheet(wb: ExcelJS.Workbook, assets: Asset[]) {
   // Title
   ws.mergeCells(r, 1, r, 4);
   const titleCell = ws.getCell(r, 1);
-  titleCell.value = 'Asset Register — Summary Report';
+  titleCell.value = 'Asset register — summary (excludes Gate Pass & Leavers)';
   titleCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF185FA5' } };
   titleCell.font = { bold: true, size: 14, color: { argb: 'FFFFFFFF' } };
   titleCell.alignment = { horizontal: 'center', vertical: 'middle' };
@@ -284,12 +288,23 @@ function buildSummarySheet(wb: ExcelJS.Workbook, assets: Asset[]) {
   r += 1;
   ws.getCell(r, 1).value = `Generated: ${new Date().toISOString()}`;
   ws.getCell(r, 1).font = { italic: true, color: { argb: 'FF888888' }, size: 9 };
+  if (scopeNote) {
+    r += 1;
+    ws.mergeCells(r, 1, r, 4);
+    const noteCell = ws.getCell(r, 1);
+    noteCell.value = scopeNote;
+    noteCell.font = { italic: true, color: { argb: 'FF555555' }, size: 9 };
+    noteCell.alignment = { wrapText: true, vertical: 'top' };
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Main export function
 // ---------------------------------------------------------------------------
-export async function generateAndUploadExcel(assets: Asset[]): Promise<ExportResult> {
+export async function generateAndUploadExcel(
+  assets: Asset[],
+  options?: { scopeNote?: string },
+): Promise<ExportResult> {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'Asset Manager';
   wb.created = new Date();
@@ -297,12 +312,12 @@ export async function generateAndUploadExcel(assets: Asset[]): Promise<ExportRes
   buildAllAssetsSheet(wb, assets);
   buildByTypeSheet(wb, assets);
   buildByLocationSheet(wb, assets);
-  buildSummarySheet(wb, assets);
+  buildSummarySheet(wb, assets, options?.scopeNote);
 
   const buffer = Buffer.from(await wb.xlsx.writeBuffer());
 
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const fileName = `asset-export-${timestamp}.xlsx`;
+  const fileName = `asset-register-export-${timestamp}.xlsx`;
   const s3Key = `exports/${fileName}`;
 
   await s3.send(
