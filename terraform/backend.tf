@@ -44,9 +44,10 @@ terraform {
   }
 }
 
+# Profile is used locally only (AWS_PROFILE=my-asset-project).
+# In GitHub Actions, OIDC injects credentials via env vars automatically.
 provider "aws" {
-  region  = var.aws_region  # ap-south-1
-  profile = "my-asset-project"
+  region  = var.aws_region
 
   default_tags {
     tags = {
