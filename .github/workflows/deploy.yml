@@ -16,6 +16,7 @@ env:
   TF_VERSION: 1.8.4
   NODE_VERSION: "20"
   TF_DIR: terraform
+  UI_BUCKET: asset-tracker-ui-755231954480
   # Set in repo Settings → Secrets and variables → Actions → Variables:
   #   AWS_ROLE_ARN  →  output from: terraform output github_actions_role_arn
 
@@ -170,3 +171,33 @@ jobs:
           echo "API_ENDPOINT=$(terraform output -raw api_endpoint)" >> $GITHUB_STEP_SUMMARY
           echo "LAMBDA=$(terraform output -raw lambda_function_name)" >> $GITHUB_STEP_SUMMARY
           echo "TABLE=$(terraform output -raw dynamodb_table_name)" >> $GITHUB_STEP_SUMMARY
+
+  # --------------------------------------------------------------------------
+  # 4. Deploy frontend to S3 static website (on every push to main)
+  # --------------------------------------------------------------------------
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: GitHubActions-Frontend-${{ github.run_id }}
+
+      - name: Upload frontend to S3
+        run: |
+          aws s3 cp frontend/index.html \
+            s3://${{ env.UI_BUCKET }}/index.html \
+            --content-type "text/html" \
+            --cache-control "no-cache"
+
+      - name: Print URL
+        run: |
+          echo "## Frontend Deployed" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 http://${{ env.UI_BUCKET }}.s3-website.${{ env.AWS_REGION }}.amazonaws.com" >> $GITHUB_STEP_SUMMARY

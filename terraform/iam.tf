@@ -168,6 +168,19 @@ resource "aws_iam_role_policy" "github_actions_deploy" {
         ]
         Resource = "arn:aws:dynamodb:${var.aws_region}:${data.aws_caller_identity.current.account_id}:table/${local.name_prefix}-*"
       },
+      # --- S3 (deploy UI to static website bucket) ---
+      {
+        Sid    = "S3UIBucketDeploy"
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject", "s3:GetObject", "s3:DeleteObject",
+          "s3:ListBucket", "s3:GetBucketLocation"
+        ]
+        Resource = [
+          "arn:aws:s3:::asset-tracker-ui-${data.aws_caller_identity.current.account_id}",
+          "arn:aws:s3:::asset-tracker-ui-${data.aws_caller_identity.current.account_id}/*"
+        ]
+      },
       # --- S3 (manage exports bucket) ---
       {
         Sid    = "S3ManageBuckets"
