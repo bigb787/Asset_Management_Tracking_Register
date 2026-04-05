@@ -229,6 +229,7 @@ const API = 'https://a6ieygm0yl.execute-api.ap-south-1.amazonaws.com';
 
 const LOC  = ['India','US','UK','Sweden'];
 const STAT = ['Active','Inactive','In Repair','Retired','Lost','In Store'];
+const LAPTOP_DESKTOP_STAT = ['Allocated','Available','To be scraped','Under Repair'];
 const HLTH = ['Good','Fair','Poor'];
 const PII  = ['Yes','No'];
 const AR   = ['Active','Revoked'];
@@ -245,8 +246,8 @@ const SECS = {
       {k:'model',          l:'Model',                t:'txt'},
       {k:'partNumber',     l:'P/N',                  t:'txt'},
       {k:'assetOwner',     l:'Asset Owner',          t:'txt'},
-      {k:'assignedTo',     l:'Assigned To',          t:'txt'},
-      {k:'status',         l:'Asset Status',         t:'sel', o:STAT, def:'Active'},
+      {k:'assignedTo',     l:'Assigned To',          t:'dl', o:['Unassigned'], def:'Unassigned', ph:'Pick Unassigned or type a name'},
+      {k:'status',         l:'Asset Status',         t:'sel', o:LAPTOP_DESKTOP_STAT, def:'Available'},
       {k:'lastOwner',      l:'Last Owner',           t:'txt'},
       {k:'department',     l:'Dept',                 t:'txt'},
       {k:'location',       l:'Location',             t:'sel', o:LOC},
@@ -276,8 +277,8 @@ const SECS = {
       {k:'model',         l:'Model',               t:'txt'},
       {k:'partNumber',    l:'P/N',                 t:'txt'},
       {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
-      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
-      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
+      {k:'assignedTo',    l:'Assigned To',         t:'dl', o:['Unassigned'], def:'Unassigned', ph:'Pick Unassigned or type a name'},
+      {k:'status',        l:'Asset Status',        t:'sel', o:LAPTOP_DESKTOP_STAT, def:'Available'},
       {k:'lastOwner',     l:'Last Owner',          t:'txt'},
       {k:'department',    l:'Dept',                t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
@@ -693,8 +694,10 @@ function badgeOrText(f,v){
   if(v===undefined||v===null||v==='') return '<span style="color:var(--muted)">—</span>';
   const s=String(v);
   const badgeMap={
+    'Allocated':'b-active','Available':'b-store','To be scraped':'b-poor','Under Repair':'b-repair',
     'Active':'b-active','Inactive':'b-inactive','In Repair':'b-repair',
     'Retired':'b-retired','Lost':'b-inactive','In Store':'b-store',
+    'Unassigned':'b-retired',
     'Revoked':'b-revoked','Good':'b-good','Fair':'b-fair','Poor':'b-poor',
     'Open':'b-open','Returned':'b-returned','Closed':'b-closed',
     'Yes':'b-yes','No':'b-no','Pending':'b-pending',
@@ -748,7 +751,8 @@ function buildForm(rec){
   }
 
   document.getElementById('form-fields').innerHTML = s.fields.map(f=>{
-    const val = rec ? (rec[f.k]??'') : (f.k==='gatePassNo'?gpNo:(f.def??''));
+    let val = rec ? (rec[f.k]??'') : (f.k==='gatePassNo'?gpNo:(f.def??''));
+    if(rec && f.t==='dl' && f.k==='assignedTo' && !String(val).trim()) val=f.def??'Unassigned';
     const wide = f.t==='area' || ['configuration','assetItems','remarks','description'].includes(f.k);
     return `<div class="fg${wide?' full':''}">
       <label>${esc(f.l)}</label>
@@ -761,8 +765,14 @@ function buildInput(f,val){
   const v=esc(String(val??''));
   const ro=f.ro?'readonly':'';
   if(f.t==='sel'){
-    const opts=(f.o||[]).map(o=>`<option${val===o?' selected':''}>${esc(o)}</option>`).join('');
+    const opts=(f.o||[]).map(o=>`<option${String(val??'')===o?' selected':''}>${esc(o)}</option>`).join('');
     return `<select class="fc" data-key="${f.k}" ${ro}>${opts}</select>`;
+  }
+  if(f.t==='dl'){
+    const listId='dl_'+f.k.replace(/[^a-zA-Z0-9]/g,'_')+'_'+String(Math.random()).slice(2,10);
+    const opts=(f.o||[]).map(o=>`<option value="${esc(o)}"></option>`).join('');
+    const ph=f.ph?esc(f.ph):'';
+    return `<input class="fc" type="text" data-key="${f.k}" value="${v}" list="${listId}" placeholder="${ph}" autocomplete="off" ${ro}><datalist id="${listId}">${opts}</datalist>`;
   }
   if(f.t==='area'){
     return `<textarea class="fc" data-key="${f.k}" rows="3" ${ro}>${v}</textarea>`;
@@ -775,8 +785,13 @@ async function saveRecord(){
   const s=SECS[curSec];
   const body={assetType: s.types[0]};
   document.querySelectorAll('#form-fields [data-key]').forEach(el=>{
+    const key=el.dataset.key;
     const v=el.value.trim();
-    if(v) body[el.dataset.key]=v;
+    if((curSec==='laptops'||curSec==='desktops')&&key==='assignedTo'){
+      body[key]=v||'Unassigned';
+      return;
+    }
+    if(v) body[key]=v;
   });
   // For types with a select for assetType, override
   const atEl=document.querySelector('#form-fields [data-key="assetType"]');
