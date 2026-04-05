@@ -1,0 +1,30 @@
+{
+  "name": "asset-management-tracking-register",
+  "version": "1.0.0",
+  "description": "Serverless Asset Manager — Lambda + DynamoDB + API Gateway",
+  "private": true,
+  "scripts": {
+    "build": "esbuild src/handler.ts --bundle --platform=node --target=node20 --outdir=dist --minify",
+    "build:dev": "esbuild src/handler.ts --bundle --platform=node --target=node20 --outdir=dist --sourcemap",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.600.0",
+    "@aws-sdk/client-s3": "^3.600.0",
+    "@aws-sdk/lib-dynamodb": "^3.600.0",
+    "@aws-sdk/s3-request-presigner": "^3.600.0",
+    "exceljs": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.143",
+    "@types/node": "^20.14.0",
+    "esbuild": "^0.21.5",
+    "typescript": "^5.4.5"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
