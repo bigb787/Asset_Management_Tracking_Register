@@ -306,6 +306,7 @@ const KEY_SORT_PRI = [
   'assetType',
   'assetName',
   'gatePassNo',
+  'serviceTag',
   'employeeName',
 ];
 
@@ -378,24 +379,6 @@ const TEMPLATE_MONITOR = [
   'installDate',
   'dateAdded',
   'supportVendor',
-  'containsPII',
-];
-
-const TEMPLATE_ACCESSORY = [
-  ...META_KEYS,
-  'manufacturer',
-  'model',
-  'partNumber',
-  'assetOwner',
-  'assignedTo',
-  'status',
-  'department',
-  'location',
-  'warranty',
-  'installDate',
-  'dateAdded',
-  'supportVendor',
-  'linkedDevice',
   'containsPII',
 ];
 
@@ -557,11 +540,6 @@ const ASSET_REGISTER_MULTI_TABS: {
   { sheetName: 'Laptops', types: ['Laptop'], templateKeys: TEMPLATE_LAPTOP },
   { sheetName: 'Desktops', types: ['Desktop'], templateKeys: TEMPLATE_DESKTOP },
   { sheetName: 'Monitors', types: ['Monitor'], templateKeys: TEMPLATE_MONITOR },
-  {
-    sheetName: 'Accessories',
-    types: ['Keyboard', 'Mouse', 'Headphone', 'USB Extender', 'Accessory'],
-    templateKeys: TEMPLATE_ACCESSORY,
-  },
   {
     sheetName: 'Network',
     types: ['Switch', 'Router', 'Firewall', 'Access Point', 'Networking'],

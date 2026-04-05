@@ -170,7 +170,6 @@ textarea.fc{resize:vertical;min-height:60px;}
   <div class="nav-item" id="nav-laptops"     onclick="goTo('laptops')"><span class="ni">💻</span>Laptops</div>
   <div class="nav-item" id="nav-desktops"    onclick="goTo('desktops')"><span class="ni">🖥️</span>Desktops</div>
   <div class="nav-item" id="nav-monitors"    onclick="goTo('monitors')"><span class="ni">🖵</span>Monitors</div>
-  <div class="nav-item" id="nav-accessories" onclick="goTo('accessories')"><span class="ni">⌨️</span>Accessories</div>
 
   <div class="nav-group">Infrastructure</div>
   <div class="nav-item" id="nav-networking"  onclick="goTo('networking')"><span class="ni">🌐</span>Networking</div>
@@ -340,27 +339,6 @@ const SECS = {
       {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
     ]
   },
-  accessories:{
-    title:'Accessories', icon:'⌨️', sub:'Employee Devices',
-    types:['Keyboard','Mouse','Headphone','USB Extender','Accessory'],
-    fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Keyboard','Mouse','Headphone','USB Extender','Accessory']},
-      {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
-      {k:'model',         l:'Model',               t:'txt'},
-      {k:'partNumber',    l:'P/N',                 t:'txt'},
-      {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
-      {k:'assignedTo',    l:'Assigned To',         t:'txt'},
-      {k:'status',        l:'Asset Status',        t:'sel', o:STAT, def:'Active'},
-      {k:'department',    l:'Dept',                t:'txt'},
-      {k:'location',      l:'Location',            t:'sel', o:LOC},
-      {k:'warranty',      l:'Warranty',            t:'txt'},
-      {k:'installDate',   l:'Install Date',        t:'date'},
-      {k:'dateAdded',     l:'Date Added/Updated',  t:'date'},
-      {k:'supportVendor', l:'Supt Vendor',         t:'txt'},
-      {k:'linkedDevice',  l:'Linked Device Tag',   t:'txt'},
-      {k:'containsPII',   l:'Contains PII',        t:'sel', o:PII, def:'No'},
-    ]
-  },
   networking:{
     title:'Networking', icon:'🌐', sub:null,
     types:['Switch','Router','Firewall','Access Point','Networking'],
@@ -508,6 +486,7 @@ const SECS = {
       {k:'securityGuard',       l:'Security Guard',        t:'txt'},
       {k:'receiverName',        l:'Receiver Name',         t:'txt'},
       {k:'assetItems',          l:'Asset Items',           t:'area'},
+      {k:'serviceTag',          l:'Service Tag',           t:'txt'},
       {k:'expectedReturnDate',  l:'Expected Return Date',  t:'date'},
       {k:'actualReturnDate',    l:'Actual Return Date',    t:'date'},
       {k:'status',              l:'Status',                t:'sel', o:['Open','Returned','Closed'], def:'Open'},
@@ -991,6 +970,7 @@ function printGatePassDoc(rec){
     row('Security Guard',rec.securityGuard)+
     row('Receiver Name',rec.receiverName)+
     row('Asset Items',rec.assetItems)+
+    row('Service Tag',rec.serviceTag)+
     row('Expected Return',rec.expectedReturnDate)+
     row('Actual Return',rec.actualReturnDate)+
     row('Status',rec.status)+
