@@ -266,7 +266,7 @@ const SECS = {
     title:'Laptops', icon:'💻', sub:'Employee Devices',
     types:['Laptop'],
     fields:[
-      {k:'assetType',      l:'Asset Type',          t:'sel', o:['Laptop'],  def:'Laptop'},
+      {k:'assetType',      l:'Asset Type',          t:'txt', def:'Laptop'},
       {k:'manufacturer',   l:'Asset Manufacturer',  t:'txt'},
       {k:'serviceTag',     l:'Service Tag',          t:'txt'},
       {k:'model',          l:'Model',                t:'txt'},
@@ -297,7 +297,7 @@ const SECS = {
     title:'Desktops', icon:'🖥️', sub:'Employee Devices',
     types:['Desktop'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Desktop'], def:'Desktop'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Desktop'},
       {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
       {k:'serviceTag',    l:'Service Tag',          t:'txt'},
       {k:'model',         l:'Model',               t:'txt'},
@@ -323,7 +323,7 @@ const SECS = {
     title:'Monitors', icon:'🖵', sub:'Employee Devices',
     types:['Monitor'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Monitor'], def:'Monitor'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Monitor'},
       {k:'manufacturer',  l:'Asset Manufacturer',  t:'txt'},
       {k:'serviceTag',    l:'Service Tag',          t:'txt'},
       {k:'model',         l:'Model',               t:'txt'},
@@ -345,7 +345,7 @@ const SECS = {
     title:'Networking', icon:'🌐', sub:null,
     types:['Switch','Router','Firewall','Access Point','Networking'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Switch','Router','Firewall','Access Point','Other']},
+      {k:'assetType',     l:'Asset Type',          t:'txt'},
       {k:'deviceId',      l:'Asset Id',            t:'txt'},
       {k:'macId',         l:'MAC ID',              t:'txt'},
       {k:'assetOwner',    l:'Asset Owner',         t:'txt'},
@@ -410,7 +410,7 @@ const SECS = {
     title:'UPS', icon:'🔋', sub:'Admin Devices',
     types:['UPS'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['UPS'], def:'UPS'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'UPS'},
       {k:'deviceId',      l:'Device Id',           t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'model',         l:'Model',               t:'txt'},
@@ -427,7 +427,7 @@ const SECS = {
     title:'Mobile Phones', icon:'📱', sub:'Admin Devices',
     types:['Mobile Phone'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Mobile Phone'], def:'Mobile Phone'},
+      {k:'assetType',     l:'Asset Type',          t:'txt', def:'Mobile Phone'},
       {k:'deviceId',      l:'Device Id',           t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'model',         l:'Model',               t:'txt'},
@@ -444,7 +444,7 @@ const SECS = {
     title:'Scanners & Printers', icon:'🖨️', sub:'Admin Devices',
     types:['Scanner','Printer'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Scanner','Printer']},
+      {k:'assetType',     l:'Asset Type',          t:'txt'},
       {k:'deviceId',      l:'Device Id',           t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'model',         l:'Model',               t:'txt'},
@@ -463,7 +463,7 @@ const SECS = {
     title:'Admin', icon:'📷', sub:'Admin Devices',
     types:['Camera','DVR'],
     fields:[
-      {k:'assetType',     l:'Asset Type',          t:'sel', o:['Camera','DVR']},
+      {k:'assetType',     l:'Asset Type',          t:'txt'},
       {k:'location',      l:'Location',            t:'sel', o:LOC},
       {k:'invoiceNo',     l:'Invoice No',          t:'txt'},
       {k:'warranty',      l:'Warranty',            t:'dl', o:['No Warranty'], def:'No Warranty', ph:'No Warranty or expiry date (YYYY-MM-DD)'},
